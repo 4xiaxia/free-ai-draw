@@ -479,7 +479,7 @@ export const SelectionPropertyPanel: React.FC = () => {
   const { t } = useI18n();
   const selectedElements = getSelectedElements(board);
   const imageFillInputRef = useRef<HTMLInputElement>(null);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const [lockAspectRatio, setLockAspectRatio] = useState(false);
   const [dismissedSelectionKey, setDismissedSelectionKey] = useState('');
   const [imageFillError, setImageFillError] = useState('');
@@ -496,6 +496,12 @@ export const SelectionPropertyPanel: React.FC = () => {
     }
     setImageFillError('');
   }, [dismissedSelectionKey, selectionKey]);
+
+  useEffect(() => {
+    if (open) {
+      setCollapsed(true);
+    }
+  }, [open, selectionKey]);
 
   const state = useMemo(() => {
     if (!open || !selectedElement) {

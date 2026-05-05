@@ -296,6 +296,20 @@ export const MenuBrandHeader = () => {
 };
 MenuBrandHeader.displayName = 'MenuBrandHeader';
 
+export const BackToLanding = ({ onBack }: { onBack: () => void }) => {
+  return (
+    <MenuItem
+      onSelect={() => {
+        onBack();
+      }}
+      aria-label="返回首页"
+    >
+      ← 返回首页
+    </MenuItem>
+  );
+};
+BackToLanding.displayName = 'BackToLanding';
+
 export const Socials = () => {
   return (
     <MenuItemLink

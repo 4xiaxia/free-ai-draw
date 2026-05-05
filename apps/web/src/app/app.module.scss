@@ -1,8 +1,11 @@
 .appStage {
   position: relative;
   min-height: 100vh;
-  background:
-    radial-gradient(circle at top, rgba(218, 226, 240, 0.36), transparent 42%),
+  background: radial-gradient(
+      circle at top,
+      rgba(218, 226, 240, 0.36),
+      transparent 42%
+    ),
     #f3f5f9;
   overflow: hidden;
 }
@@ -58,7 +61,8 @@
 }
 
 .layerEnterFromBoard {
-  animation: landing-enter-from-board 520ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: landing-enter-from-board 520ms cubic-bezier(0.16, 1, 0.3, 1)
+    forwards;
 }
 
 .layerExitToLanding {
@@ -102,8 +106,11 @@
   width: 100vw;
   height: 100vh;
   position: relative;
-  background:
-    radial-gradient(circle at top left, rgba(216, 223, 236, 0.28), transparent 30%),
+  background: radial-gradient(
+      circle at top left,
+      rgba(216, 223, 236, 0.28),
+      transparent 30%
+    ),
     #f7f8fb;
   overflow: hidden;
 }
@@ -316,8 +323,7 @@
   border: 1px solid rgba(203, 213, 225, 0.9);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.96);
-  box-shadow:
-    0 10px 24px rgba(15, 23, 42, 0.12),
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12),
     0 1px 4px rgba(15, 23, 42, 0.06);
   color: #0f172a;
   display: inline-flex;
@@ -349,8 +355,7 @@
 
 .navButton:hover {
   background: #ffffff;
-  box-shadow:
-    0 18px 34px rgba(15, 23, 42, 0.16),
+  box-shadow: 0 18px 34px rgba(15, 23, 42, 0.16),
     0 3px 12px rgba(15, 23, 42, 0.08);
 }
 
@@ -394,6 +399,447 @@
   }
 }
 
+/* ── Board Manager Sidebar ── */
+
+.boardManager {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 220px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  padding: 14px 10px;
+  border-right: 1px solid rgba(17, 24, 39, 0.08);
+  background: radial-gradient(
+      circle at top left,
+      rgba(216, 223, 236, 0.22),
+      transparent 30%
+    ),
+    #f7f8fb;
+  box-sizing: border-box;
+  transition: width 220ms cubic-bezier(0.4, 0, 0.2, 1),
+    padding 220ms cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.boardManagerClosed {
+  width: 44px;
+  padding: 14px 6px;
+}
+
+.boardManagerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 0 4px;
+  min-height: 32px;
+}
+
+.boardManagerTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: opacity 150ms ease;
+}
+
+.boardManagerClosed .boardManagerTitle {
+  display: none;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.boardManagerClosed .boardManagerHeader {
+  justify-content: center;
+  padding: 0;
+}
+
+.boardManagerToggle {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid rgba(17, 24, 39, 0.1);
+  border-radius: 8px;
+  background: #fff;
+  color: #667085;
+  font-size: 9px;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 150ms ease, border-color 150ms ease,
+    background-color 150ms ease;
+}
+
+.boardManagerToggle:hover {
+  border-color: rgba(17, 24, 39, 0.2);
+  background: #f7f8fb;
+  color: #111827;
+}
+
+.boardManagerToggle:active {
+  transform: scale(0.92);
+}
+
+.boardManagerCreateBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  height: 36px;
+  margin-bottom: 12px;
+  padding: 0 10px;
+  border: 1px solid rgba(17, 24, 39, 0.1);
+  border-radius: 10px;
+  background: #fff;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 150ms ease, box-shadow 150ms ease,
+    border-color 150ms ease;
+}
+
+.boardManagerCreateBtn:hover {
+  border-color: rgba(17, 24, 39, 0.18);
+  box-shadow: 0 2px 8px rgba(17, 24, 39, 0.06);
+}
+
+.boardManagerCreateBtn:active {
+  transform: scale(0.96);
+}
+
+.boardManagerCreateRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.boardManagerCreateRow .boardManagerCreateBtn {
+  margin-bottom: 0;
+}
+
+.boardManagerCreateFolderBtn {
+  color: #344054;
+  background: #f9fafb;
+}
+
+.boardManagerCreateIcon {
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.boardManagerClosed .boardManagerCreateBtn {
+  padding: 0;
+}
+
+.boardManagerClosed .boardManagerCreateBtn span:last-child {
+  display: none;
+}
+
+.boardManagerList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.boardManagerStorageStatus {
+  margin: -4px 0 10px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  background: rgba(248, 113, 113, 0.1);
+  color: #b42318;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.boardManagerSection {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.boardManagerSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 24px;
+  padding: 0 8px;
+  color: #667085;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.boardManagerSectionAction {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #667085;
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease,
+    transform 120ms ease;
+}
+
+.boardManagerSectionAction:hover {
+  background: rgba(59, 130, 246, 0.1);
+  color: #2563eb;
+}
+
+.boardManagerSectionAction:active {
+  transform: scale(0.92);
+}
+
+.boardManagerItem {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+  min-height: 36px;
+  box-sizing: border-box;
+}
+
+.boardManagerItem:hover {
+  background: rgba(17, 24, 39, 0.04);
+}
+
+.boardManagerItemActive {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.boardManagerItemActive::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 18px;
+  border-radius: 0 3px 3px 0;
+  background: #3b82f6;
+}
+
+.boardManagerItemActive .boardManagerItemName {
+  color: #2563eb;
+  font-weight: 700;
+}
+
+.boardManagerItemIcon {
+  flex-shrink: 0;
+  font-size: 13px;
+  color: #9ca3af;
+  line-height: 1;
+}
+
+.boardManagerItemActive .boardManagerItemIcon {
+  color: #3b82f6;
+}
+
+.boardManagerItemName {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.boardManagerItemInput {
+  flex: 1;
+  min-width: 0;
+  padding: 3px 6px;
+  border: 1px solid #111827;
+  border-radius: 6px;
+  background: #fff;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 500;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(17, 24, 39, 0.08);
+}
+
+.boardManagerItemActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+
+.boardManagerItem:hover .boardManagerItemActions {
+  opacity: 1;
+}
+
+.boardManagerFolder {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.boardManagerFolderHeader {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  color: #344054;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.boardManagerFolderHeader:hover {
+  background: rgba(17, 24, 39, 0.04);
+}
+
+.boardManagerFolderHeader:hover .boardManagerItemActions {
+  opacity: 1;
+}
+
+.boardManagerFolderToggle,
+.boardManagerFolderIcon {
+  flex-shrink: 0;
+  color: #98a2b3;
+  font-size: 10px;
+  line-height: 1;
+}
+
+.boardManagerFolderIcon {
+  font-size: 12px;
+}
+
+.boardManagerFolderName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: #344054;
+  font-size: 12px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.boardManagerFolderCount {
+  min-width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(102, 112, 133, 0.1);
+  color: #667085;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.boardManagerFolderChildren {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-left: 12px;
+}
+
+.boardManagerFolderChildren .boardManagerItem {
+  padding-left: 9px;
+}
+
+.boardManagerFolderEmpty {
+  padding: 6px 10px 8px;
+  color: #98a2b3;
+  font-size: 12px;
+}
+
+.boardManagerItemActionBtn {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #9ca3af;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease,
+    transform 120ms ease;
+}
+
+.boardManagerItemActionBtn:hover {
+  background: rgba(17, 24, 39, 0.06);
+  color: #374151;
+}
+
+.boardManagerItemActionBtn:active {
+  transform: scale(0.92);
+}
+
+.boardContainerWithManager {
+  padding-left: 220px;
+  width: calc(100vw - 220px);
+}
+
+.boardContainerWithManager :global(.app-toolbar) {
+  left: 256px;
+}
+
+.boardContainerManagerClosed :global(.app-toolbar) {
+  left: 80px;
+}
+
+.loadingOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #667085;
+  font-size: 14px;
+}
+
+@media (max-width: 720px) {
+  .boardManager {
+    width: 180px;
+  }
+
+  .boardManagerClosed {
+    width: 40px;
+  }
+
+  .boardContainerWithManager {
+    padding-left: 180px;
+    width: calc(100vw - 180px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .layerExitToBoard,
   .layerEnterFromBoard,
@@ -406,7 +852,15 @@
   .openButton,
   .closeButton,
   .applyButton,
-  .resetButton {
+  .resetButton,
+  .boardManager,
+  .boardManagerToggle,
+  .boardManagerCreateBtn,
+  .boardManagerItem,
+  .boardManagerFolderHeader,
+  .boardManagerSectionAction,
+  .boardManagerItemActions,
+  .boardManagerItemActionBtn {
     transition-duration: 0ms;
   }
 }

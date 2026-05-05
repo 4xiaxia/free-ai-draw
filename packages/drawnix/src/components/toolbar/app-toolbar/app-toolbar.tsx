@@ -26,17 +26,20 @@ import {
   SaveAsPptx,
   SaveToFile,
   MenuBrandHeader,
+  BackToLanding,
 } from './app-menu-items';
 import { LanguageSwitcherMenu } from './language-switcher-menu';
 import Menu from '../../menu/menu';
 import MenuSeparator from '../../menu/menu-separator';
 import { useI18n } from '../../../i18n';
+import { useDrawnix } from '../../../hooks/use-drawnix';
 import { AppLogo } from '../../app-logo';
 import './app-toolbar.scss';
 
 export const AppToolbar = () => {
   const board = useBoard();
   const { t } = useI18n();
+  const { appState } = useDrawnix();
   const container = PlaitBoard.getBoardContainer(board);
   const selectedElements = getSelectedElements(board);
   const [appMenuOpen, setAppMenuOpen] = useState(false);
@@ -85,6 +88,10 @@ export const AppToolbar = () => {
               >
                 <MenuBrandHeader />
                 <MenuSeparator />
+                {appState.onBackToLanding && (
+                  <BackToLanding onBack={appState.onBackToLanding} />
+                )}
+                {appState.onBackToLanding && <MenuSeparator />}
                 <OpenFile></OpenFile>
                 <SaveToFile></SaveToFile>
                 <SaveAsImage></SaveAsImage>

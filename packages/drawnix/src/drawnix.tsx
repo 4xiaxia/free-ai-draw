@@ -70,6 +70,8 @@ export type DrawnixProps = {
   tutorial?: boolean;
   fontFamilies?: FontFamilyConfigInput[];
   fontRoleFamilies?: FontRoleFamilyConfig;
+  onBackToLanding?: () => void;
+  onDialogTypeChange?: (value: DrawnixState['openDialogType']) => void;
 } & React.HTMLAttributes<HTMLDivElement>;
 
 export const Drawnix: React.FC<DrawnixProps> = ({
@@ -85,6 +87,8 @@ export const Drawnix: React.FC<DrawnixProps> = ({
   tutorial = false,
   fontFamilies,
   fontRoleFamilies,
+  onBackToLanding,
+  onDialogTypeChange,
 }) => {
   const options: PlaitBoardOptions = {
     readonly: false,
@@ -105,6 +109,7 @@ export const Drawnix: React.FC<DrawnixProps> = ({
       boardImportProgress: initialBoardAssemblyProgress,
       imageEditTargetId: null,
       imageGenerationTasks: {},
+      onBackToLanding: onBackToLanding || null,
     };
   });
 
@@ -155,6 +160,10 @@ export const Drawnix: React.FC<DrawnixProps> = ({
   useEffect(() => {
     syncImageGenerationTasks(appState.imageGenerationTasks);
   }, [appState.imageGenerationTasks]);
+
+  useEffect(() => {
+    onDialogTypeChange?.(appState.openDialogType);
+  }, [appState.openDialogType, onDialogTypeChange]);
 
   return (
     <I18nProvider>

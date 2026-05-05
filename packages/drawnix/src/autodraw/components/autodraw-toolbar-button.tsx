@@ -1,5 +1,5 @@
 import { ToolButton } from '../../components/tool-button';
-import { AIMermaidIcon } from '../../components/icons';
+import { AutodrawBrushIcon } from '../../components/icons';
 import { useI18n } from '../../i18n';
 import { DialogType, useDrawnix } from '../../hooks/use-drawnix';
 import '../styles/autodraw-toolbar-button.scss';
@@ -16,7 +16,7 @@ export const AutodrawToolbarButton = () => {
       visible={true}
       className="autodraw-toolbar-button"
       selected={isOpen}
-      icon={AIMermaidIcon}
+      icon={AutodrawBrushIcon}
       title={label}
       aria-label={label}
       showAriaLabel={true}

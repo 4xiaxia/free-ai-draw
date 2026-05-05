@@ -58,6 +58,7 @@ export type DrawnixState = {
   linkState?: LinkState | null;
   imageEditTargetId?: string | null;
   imageGenerationTasks: ImageGenerationTaskMap;
+  onBackToLanding?: (() => void) | null;
 };
 
 export const DrawnixContext = createContext<{

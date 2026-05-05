@@ -935,3 +935,61 @@ export const AIMermaidIcon = createIcon(
     </g>
   </svg>
 );
+
+export const AutodrawBrushIcon = createIcon(
+  <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="autodraw-brush-body" x1="3" y1="3" x2="13" y2="13" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stopColor="#4F46E5" />
+        <stop offset="0.34" stopColor="#2563EB" />
+        <stop offset="0.7" stopColor="#F59E0B" />
+        <stop offset="1" stopColor="#FACC15" />
+      </linearGradient>
+      <linearGradient id="autodraw-brush-tip" x1="8.2" y1="8.8" x2="12.8" y2="13.2" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stopColor="#EC4899" />
+        <stop offset="1" stopColor="#FB7185" />
+      </linearGradient>
+      <linearGradient id="autodraw-brush-metal" x1="6.6" y1="6.1" x2="9.4" y2="8.9" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stopColor="#FFF7D6" />
+        <stop offset="0.48" stopColor="#FCD34D" />
+        <stop offset="1" stopColor="#D97706" />
+      </linearGradient>
+    </defs>
+    <g fill="none" fillRule="evenodd">
+      <path
+        d="M9.35 2.45a1.6 1.6 0 0 1 2.262 0l1.938 1.938a1.6 1.6 0 0 1 0 2.262L8.84 11.36a1.85 1.85 0 0 1-.797.469l-2.418.691a.62.62 0 0 1-.767-.767l.691-2.418c.078-.273.24-.523.469-.797L9.35 2.45Z"
+        fill="url(#autodraw-brush-body)"
+      />
+      <path
+        d="M8.64 3.16 12.84 7.36"
+        stroke="url(#autodraw-brush-metal)"
+        strokeWidth="1.15"
+        strokeLinecap="round"
+      />
+      <path
+        d="m5.78 9.78 1.98.46.46 1.98-2.44.7.7-2.44Z"
+        fill="url(#autodraw-brush-tip)"
+      />
+      <path
+        d="M10.28 2.66c.42-.42 1.1-.42 1.52 0l1.54 1.54c.42.42.42 1.1 0 1.52l-.73.73-3.06-3.06.73-.73Z"
+        fill="url(#autodraw-brush-metal)"
+      />
+      <path
+        d="M11.92 2.88c.28.03.54.15.75.36l1.09 1.09"
+        stroke="rgba(255,255,255,0.7)"
+        strokeWidth="0.7"
+        strokeLinecap="round"
+      />
+      <path
+        d="M4.25 4.2 4.55 5l.8.3-.8.3-.3.8-.3-.8-.8-.3.8-.3.3-.8Z"
+        fill="#60A5FA"
+        opacity="0.95"
+      />
+      <path
+        d="M12.85 10.6 13.05 11.15l.55.2-.55.2-.2.55-.2-.55-.55-.2.55-.2.2-.55Z"
+        fill="#FBBF24"
+        opacity="0.9"
+      />
+    </g>
+  </svg>
+);
