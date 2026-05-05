@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Check, NoColorIcon } from './icons';
-import Stack from '../components/stack';
 import './color-picker.scss';
 import { splitRows } from '../utils/common';
 import {
@@ -32,46 +31,46 @@ export type ColorPickerProps = {
   onColorChange: (color: string) => void;
   onOpacityChange: (opacity: number) => void;
   currentColor?: string;
+  label?: string;
 };
 
-export const ColorPicker = React.forwardRef((props: ColorPickerProps, ref) => {
-  const board = useBoard();
-  const { t } = useI18n();
-  const { currentColor, onColorChange, onOpacityChange } = props;
-  const [selectedColor, setSelectedColor] = useState(
-    (currentColor && removeHexAlpha(currentColor)) ||
-      ROWS_CLASSIC_COLORS[0][0].value
-  );
-  const [opacity, setOpacity] = useState(() => {
-    const _opacity = currentColor && hexAlphaToOpacity(currentColor);
-    return (!isNullOrUndefined(_opacity) ? _opacity : 100) as number;
-  });
-  return (
-    <Stack.Col gap={3}>
-        <SizeSlider
-          title={t('popupToolbar.opacity')}
-          step={5}
-          defaultValue={opacity}
-          onChange={(value) => {
-            setOpacity(value);
-            onOpacityChange(value);
-          }}
-          beforeStart={() => {
-            MERGING.set(board, true);
-            PlaitHistoryBoard.setSplittingOnce(board, true);
-          }}
-          afterEnd={() => {
-            MERGING.set(board, false);
-          }}
-          disabled={selectedColor === CLASSIC_COLORS[0]['value']}
-        ></SizeSlider>
-        <Stack.Col gap={2}>
+export const ColorPicker = React.forwardRef<HTMLDivElement, ColorPickerProps>(
+  (props, ref) => {
+    const board = useBoard();
+    const { t } = useI18n();
+    const { currentColor, label, onColorChange, onOpacityChange } = props;
+    const [selectedColor, setSelectedColor] = useState(
+      (currentColor && removeHexAlpha(currentColor)) ||
+        ROWS_CLASSIC_COLORS[0][0].value
+    );
+    const [opacity, setOpacity] = useState(() => {
+      const _opacity = currentColor && hexAlphaToOpacity(currentColor);
+      return (!isNullOrUndefined(_opacity) ? _opacity : 100) as number;
+    });
+    const previewColor = isNoColor(selectedColor) ? TRANSPARENT : selectedColor;
+
+    return (
+      <div className="color-picker" ref={ref}>
+        {label && (
+          <div className="color-picker__header">
+            <span className="color-picker__title">{label}</span>
+            <span
+              className="color-picker__preview"
+              style={{ backgroundColor: previewColor }}
+              aria-hidden="true"
+            >
+              {isNoColor(selectedColor) && NoColorIcon}
+            </span>
+          </div>
+        )}
+        <div className="color-picker__palette" role="group" aria-label={label}>
           {ROWS_CLASSIC_COLORS.map((colors, index) => (
-            <Stack.Row key={index} gap={2}>
+            <div className="color-picker__row" key={index}>
               {colors.map((color) => {
                 return (
                   <button
                     key={color.value}
+                    type="button"
                     className={`color-select-item ${
                       selectedColor === color.value ? 'active' : ''
                     } ${isNoColor(color.value) ? 'no-color' : ''}`}
@@ -90,17 +89,45 @@ export const ColorPicker = React.forwardRef((props: ColorPickerProps, ref) => {
                       }
                       onColorChange(color.value);
                     }}
-                    title={t((color.name || 'color.unknown') as keyof Translations)}
-                    aria-label={t((color.name || 'color.unknown') as keyof Translations)}
+                    title={t(
+                      (color.name || 'color.unknown') as keyof Translations
+                    )}
+                    aria-label={t(
+                      (color.name || 'color.unknown') as keyof Translations
+                    )}
                   >
                     {isNoColor(color.value) && NoColorIcon}
                     {selectedColor === color.value && Check}
                   </button>
                 );
               })}
-            </Stack.Row>
+            </div>
           ))}
-        </Stack.Col>
-      </Stack.Col>
-  );
-});
+        </div>
+        <div className="color-picker__opacity">
+          <div className="color-picker__opacity-header">
+            <span>{t('popupToolbar.opacity')}</span>
+            <span>{opacity}%</span>
+          </div>
+          <SizeSlider
+            title={t('popupToolbar.opacity')}
+            step={5}
+            defaultValue={opacity}
+            onChange={(value) => {
+              setOpacity(value);
+              onOpacityChange(value);
+            }}
+            beforeStart={() => {
+              MERGING.set(board, true);
+              PlaitHistoryBoard.setSplittingOnce(board, true);
+            }}
+            afterEnd={() => {
+              MERGING.set(board, false);
+            }}
+            disabled={isNoColor(selectedColor)}
+          ></SizeSlider>
+        </div>
+      </div>
+    );
+  }
+);

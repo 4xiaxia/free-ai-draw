@@ -1,0 +1,318 @@
+- generic [ref=e222]:
+  - button "返回首页" [ref=e223] [cursor=pointer]:
+    - generic [ref=e224]: ←
+    - generic [ref=e225]: 返回首页
+  - generic [ref=e227]:
+    - generic [ref=e229]:
+      - img [ref=e230]
+      - img
+    - generic [ref=e232]:
+      - button "应用菜单" [ref=e233] [cursor=pointer]:
+        - img [ref=e235]
+      - button "撤销" [ref=e238] [cursor=pointer]:
+        - img [ref=e240]
+      - button "重做" [disabled] [ref=e244]:
+        - img [ref=e246]
+      - button "复制" [ref=e416] [cursor=pointer]:
+        - img [ref=e418]
+      - button "删除" [ref=e422] [cursor=pointer]:
+        - img [ref=e424]
+    - generic [ref=e251]:
+      - generic "手形工具 — H" [ref=e252] [cursor=pointer]:
+        - radio "手形工具 — H"
+        - img [ref=e254]
+      - generic "选择 — V" [ref=e257] [cursor=pointer]:
+        - radio "选择 — V" [checked]
+        - img [ref=e259]
+      - generic "思维导图 — M" [ref=e262] [cursor=pointer]:
+        - radio "思维导图 — M"
+        - img [ref=e264]
+      - generic "文本 — T" [ref=e267] [cursor=pointer]:
+        - radio "文本 — T"
+        - img [ref=e269]
+      - button "画笔 — P" [ref=e272] [cursor=pointer]:
+        - img [ref=e274]
+      - button "箭头 — A" [ref=e276] [cursor=pointer]:
+        - img [ref=e278]
+      - button "形状" [ref=e281] [cursor=pointer]:
+        - img [ref=e283]
+      - generic "图片 — Cmd+U" [ref=e286] [cursor=pointer]:
+        - radio "图片 — Cmd+U"
+        - img [ref=e288]
+      - generic [ref=e291]:
+        - button "素材库" [ref=e292] [cursor=pointer]:
+          - img [ref=e294]
+        - button "Autodraw" [ref=e301] [cursor=pointer]:
+          - img [ref=e303]
+          - generic [ref=e313]: Autodraw
+        - button "auto-mermaid" [ref=e314] [cursor=pointer]:
+          - img [ref=e316]
+          - generic [ref=e326]: auto-mermaid
+      - button "更多工具" [ref=e327] [cursor=pointer]:
+        - img [ref=e329]
+    - generic [ref=e336]:
+      - button "缩小 — Cmd+-" [ref=e337] [cursor=pointer]:
+        - img [ref=e339]
+      - generic "自适应" [ref=e342] [cursor=pointer]: 100%
+      - button "放大 — Cmd++" [ref=e343] [cursor=pointer]:
+        - img [ref=e345]
+    - combobox [ref=e349] [cursor=pointer]:
+      - option "默认" [selected]
+      - option "缤纷"
+      - option "柔和"
+      - option "复古"
+      - option "暗夜"
+      - option "星空"
+    - generic [ref=e427]:
+      - combobox "字体" [ref=e428] [cursor=pointer]:
+        - generic [ref=e429]: 默认无衬线
+        - img [ref=e431]
+      - combobox "字号" [ref=e433]:
+        - spinbutton [ref=e434]: "14"
+        - generic [ref=e435]:
+          - button "字号 +" [ref=e436] [cursor=pointer]:
+            - img [ref=e437]
+          - button "字号 -" [ref=e439] [cursor=pointer]:
+            - img [ref=e440]
+      - button "字体颜色" [ref=e442] [cursor=pointer]:
+        - img [ref=e444]
+      - button "边框" [ref=e448] [cursor=pointer]
+      - button "填充颜色" [ref=e451] [cursor=pointer]:
+        - img [ref=e453]
+      - generic "圆角" [ref=e457]:
+        - img [ref=e459]
+        - spinbutton [ref=e462]: "0"
+        - generic [ref=e463]:
+          - button "圆角 +" [ref=e464] [cursor=pointer]:
+            - img [ref=e465]
+          - button "圆角 -" [ref=e467] [cursor=pointer]:
+            - img [ref=e468]
+      - button "链接" [ref=e470] [cursor=pointer]:
+        - img [ref=e472]
+      - button "排列" [ref=e475] [cursor=pointer]:
+        - img [ref=e477]
+      - button "更多选项" [ref=e479] [cursor=pointer]:
+        - img [ref=e481]
+    - generic "箭头末端连接图形" [ref=e486]:
+      - button "长方形 — R" [ref=e487] [cursor=pointer]:
+        - img [ref=e488]
+      - button "圆 — O" [ref=e490] [cursor=pointer]:
+        - img [ref=e491]
+      - button "三角形" [ref=e494] [cursor=pointer]:
+        - img [ref=e495]
+      - button "菱形" [ref=e498] [cursor=pointer]:
+        - img [ref=e499]
+      - button "平行四边形" [ref=e502] [cursor=pointer]:
+        - img [ref=e503]
+      - button "圆角矩形" [ref=e506] [cursor=pointer]:
+        - img [ref=e507]
+    - complementary "属性设置" [ref=e510]:
+      - generic [ref=e511]:
+        - generic [ref=e512]:
+          - generic [ref=e513]: 属性设置
+          - generic [ref=e514]: 图形 · 1 个 · 100 x 100
+        - generic [ref=e515]:
+          - button "收起属性面板" [ref=e516] [cursor=pointer]: ‹
+          - button "关闭属性面板" [ref=e517] [cursor=pointer]: ×
+      - generic [ref=e518]:
+        - generic [ref=e519]:
+          - generic [ref=e520]: 文字
+          - generic [ref=e521]:
+            - generic [ref=e522]: 字体
+            - combobox "字体" [ref=e523]:
+              - option "默认无衬线" [selected]
+              - option "思源黑体"
+              - option "Arial"
+              - option "宋体"
+              - option "文楷"
+              - option "等宽"
+          - generic [ref=e524]:
+            - generic [ref=e525]:
+              - generic [ref=e526]: 字号
+              - spinbutton "字号" [ref=e527]: "16"
+            - generic [ref=e528]:
+              - generic [ref=e529]: 预设
+              - combobox "预设" [ref=e530]:
+                - option "10px"
+                - option "12px"
+                - option "14px"
+                - option "16px" [selected]
+                - option "18px"
+                - option "20px"
+                - option "24px"
+                - option "28px"
+                - option "32px"
+                - option "44px"
+                - option "56px"
+                - option "72px"
+          - generic [ref=e531]:
+            - generic [ref=e532]: 字重
+            - combobox "字重" [ref=e533]:
+              - option "常规" [selected]
+              - option "中等"
+              - option "半粗"
+              - option "粗体"
+          - generic [ref=e534]:
+            - button "B" [ref=e535] [cursor=pointer]
+            - button "I" [ref=e536] [cursor=pointer]
+            - button "U" [ref=e537] [cursor=pointer]
+            - button "S" [ref=e538] [cursor=pointer]
+          - generic [ref=e539]:
+            - button "左" [ref=e540] [cursor=pointer]
+            - button "中" [ref=e541] [cursor=pointer]
+            - button "右" [ref=e542] [cursor=pointer]
+          - generic [ref=e543]:
+            - button "常规" [ref=e544] [cursor=pointer]
+            - button "上标" [ref=e545] [cursor=pointer]
+            - button "下标" [ref=e546] [cursor=pointer]
+          - generic [ref=e547]:
+            - button "AA" [ref=e548] [cursor=pointer]
+            - button "aa" [ref=e549] [cursor=pointer]
+            - button "Aa" [ref=e550] [cursor=pointer]
+          - generic [ref=e551]:
+            - generic [ref=e552]:
+              - generic [ref=e553]: 行高
+              - status [ref=e554]: 1.5x
+            - slider [ref=e555]: "1.5"
+          - generic [ref=e556]:
+            - generic [ref=e557]:
+              - generic [ref=e558]: 字距
+              - status [ref=e559]: 0px
+            - slider [ref=e560]: "0"
+          - generic [ref=e561]:
+            - generic [ref=e562]: 文字颜色
+            - generic [ref=e563]:
+              - button "color.none" [ref=e564] [cursor=pointer]
+              - button "color.default" [ref=e565] [cursor=pointer]
+              - button "color.white" [ref=e566] [cursor=pointer]
+              - button "color.gray" [ref=e567] [cursor=pointer]
+              - button "color.deepBlue" [ref=e568] [cursor=pointer]
+              - button "color.red" [ref=e569] [cursor=pointer]
+              - button "color.green" [ref=e570] [cursor=pointer]
+              - button "color.yellow" [ref=e571] [cursor=pointer]
+              - button "color.purple" [ref=e572] [cursor=pointer]
+              - button "color.orange" [ref=e573] [cursor=pointer]
+              - button "color.pastelPink" [ref=e574] [cursor=pointer]
+              - button "color.cyan" [ref=e575] [cursor=pointer]
+            - generic [ref=e576]:
+              - button "吸取屏幕颜色" [ref=e577] [cursor=pointer]: ↙
+              - textbox "#111827" [ref=e578]
+        - generic [ref=e579]:
+          - generic [ref=e580]: 图形
+          - generic [ref=e581]:
+            - button "长方形 — R" [ref=e582] [cursor=pointer]:
+              - img [ref=e583]
+            - button "圆 — O" [ref=e585] [cursor=pointer]:
+              - img [ref=e586]
+            - button "三角形" [ref=e589] [cursor=pointer]:
+              - img [ref=e590]
+            - button "椭圆角矩形" [ref=e593] [cursor=pointer]:
+              - img [ref=e594]
+            - button "右花括注释" [ref=e597] [cursor=pointer]:
+              - img [ref=e598]
+            - button "左花括注释" [ref=e601] [cursor=pointer]:
+              - img [ref=e602]
+            - button "菱形" [ref=e605] [cursor=pointer]:
+              - img [ref=e606]
+            - button "平行四边形" [ref=e609] [cursor=pointer]:
+              - img [ref=e610]
+            - button "圆角矩形" [ref=e613] [cursor=pointer]:
+              - img [ref=e614]
+        - generic [ref=e617]:
+          - generic [ref=e618]: 外观
+          - generic [ref=e619]:
+            - generic [ref=e620]: 填充
+            - generic [ref=e621]:
+              - button "无" [ref=e622] [cursor=pointer]
+              - button "color.default" [ref=e623] [cursor=pointer]
+              - button "color.white" [ref=e624] [cursor=pointer]
+              - button "color.gray" [ref=e625] [cursor=pointer]
+              - button "color.deepBlue" [ref=e626] [cursor=pointer]
+              - button "color.red" [ref=e627] [cursor=pointer]
+              - button "color.green" [ref=e628] [cursor=pointer]
+              - button "color.yellow" [ref=e629] [cursor=pointer]
+              - button "color.purple" [ref=e630] [cursor=pointer]
+              - button "color.orange" [ref=e631] [cursor=pointer]
+              - button "color.pastelPink" [ref=e632] [cursor=pointer]
+              - button "color.cyan" [ref=e633] [cursor=pointer]
+            - generic [ref=e634]:
+              - button "吸取屏幕颜色" [ref=e635] [cursor=pointer]: ↙
+              - textbox "#111827" [ref=e636]
+          - generic [ref=e637]:
+            - generic [ref=e638]: 描边
+            - generic [ref=e639]:
+              - button "color.none" [ref=e640] [cursor=pointer]
+              - button "color.default" [ref=e641] [cursor=pointer]
+              - button "color.white" [ref=e642] [cursor=pointer]
+              - button "color.gray" [ref=e643] [cursor=pointer]
+              - button "color.deepBlue" [ref=e644] [cursor=pointer]
+              - button "color.red" [ref=e645] [cursor=pointer]
+              - button "color.green" [ref=e646] [cursor=pointer]
+              - button "color.yellow" [ref=e647] [cursor=pointer]
+              - button "color.purple" [ref=e648] [cursor=pointer]
+              - button "color.orange" [ref=e649] [cursor=pointer]
+              - button "color.pastelPink" [ref=e650] [cursor=pointer]
+              - button "color.cyan" [ref=e651] [cursor=pointer]
+            - generic [ref=e652]:
+              - button "吸取屏幕颜色" [ref=e653] [cursor=pointer]: ↙
+              - textbox "#111827" [ref=e654]: "#000000"
+          - generic [ref=e655]:
+            - generic [ref=e656]:
+              - generic [ref=e657]: 描边宽度
+              - status [ref=e658]: 2px
+            - slider [ref=e659]: "2"
+          - generic [ref=e660]:
+            - generic [ref=e661]:
+              - generic [ref=e662]: 不透明度
+              - status [ref=e663]: 100%
+            - slider [ref=e664]: "100"
+          - generic [ref=e665]:
+            - generic [ref=e666]:
+              - generic [ref=e667]: 圆角
+              - status [ref=e668]: 0px
+            - slider [ref=e669]: "0"
+          - generic [ref=e670]:
+            - generic [ref=e671]: 阴影
+            - button "关闭" [ref=e672] [cursor=pointer]
+          - generic [ref=e673]:
+            - generic [ref=e674]: 渐变
+            - button "关闭" [ref=e675] [cursor=pointer]
+        - generic [ref=e676]:
+          - generic [ref=e677]: 尺寸与位置
+          - generic [ref=e678]:
+            - generic [ref=e679]:
+              - generic [ref=e680]: X
+              - spinbutton "X" [ref=e681]: "-50"
+            - generic [ref=e682]:
+              - generic [ref=e683]: "Y"
+              - spinbutton "Y" [ref=e684]: "-50"
+            - generic [ref=e685]:
+              - generic [ref=e686]: W
+              - spinbutton "W" [ref=e687]: "100"
+            - generic [ref=e688]:
+              - generic [ref=e689]: H
+              - spinbutton "H" [ref=e690]: "100"
+          - generic [ref=e691]:
+            - generic [ref=e692]:
+              - generic [ref=e693]: 旋转
+              - status [ref=e694]: 0°
+            - slider [ref=e695]: "0"
+        - generic [ref=e696]:
+          - generic [ref=e697]: 操作
+          - generic [ref=e698]:
+            - button "复制" [ref=e699] [cursor=pointer]
+            - button "删除" [ref=e700] [cursor=pointer]
+            - button "上移" [ref=e701] [cursor=pointer]
+            - button "下移" [ref=e702] [cursor=pointer]
+            - button "置顶" [ref=e703] [cursor=pointer]
+            - button "置底" [ref=e704] [cursor=pointer]
+          - generic [ref=e705]:
+            - button "左" [ref=e706] [cursor=pointer]
+            - button "中" [ref=e707] [cursor=pointer]
+            - button "右" [ref=e708] [cursor=pointer]
+            - button "上" [ref=e709] [cursor=pointer]
+            - button "垂" [ref=e710] [cursor=pointer]
+            - button "下" [ref=e711] [cursor=pointer]
+            - button "水平" [ref=e712] [cursor=pointer]
+            - button "垂直" [ref=e713] [cursor=pointer]
+  - button "字体方案" [ref=e351] [cursor=pointer]

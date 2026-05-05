@@ -87,18 +87,27 @@ describe('icon-library', () => {
     applyIconLibraryAsset(board, {
       id: 'icon-1',
       name: 'database',
-      url: 'data:image/svg+xml;base64,aaa',
+      dataUrl: 'data:image/svg+xml;base64,aaa',
+      thumbnailDataUrl: 'data:image/svg+xml;base64,aaa',
+      mimeType: 'image/svg+xml',
+      kind: 'svg',
+      source: 'local',
+      size: 128,
+      updatedAt: '2026-01-01T00:00:00.000Z',
+      tags: [],
+      favorite: false,
+      isSubject: false,
       width: 240,
       height: 120,
-      createdAt: 1,
+      createdAt: '2026-01-01T00:00:00.000Z',
     });
 
     expect(mockInsertImage).toHaveBeenCalledWith(
       board,
       expect.objectContaining({
         url: 'data:image/svg+xml;base64,aaa',
-        width: 96,
-        height: 48,
+        width: 240,
+        height: 120,
       })
     );
   });
@@ -122,11 +131,22 @@ describe('icon-library', () => {
     applyIconLibraryAsset(board, {
       id: 'icon-2',
       name: 'server',
-      url: 'data:image/svg+xml;base64,bbb',
+      dataUrl: 'data:image/svg+xml;base64,bbb',
+      thumbnailDataUrl: 'data:image/svg+xml;base64,bbb',
+      mimeType: 'image/svg+xml',
+      kind: 'svg',
+      source: 'local',
+      size: 128,
+      updatedAt: '2026-01-01T00:00:00.000Z',
+      tags: [],
+      favorite: false,
+      isSubject: false,
       width: 64,
       height: 64,
-      createdAt: 2,
+      createdAt: '2026-01-01T00:00:00.000Z',
     });
+
+    expect(mockInsertImage).not.toHaveBeenCalled();
 
     expect(mockWithNewBatch).toHaveBeenCalledTimes(1);
     expect(mockSetNode).toHaveBeenCalledWith(
@@ -160,10 +180,19 @@ describe('icon-library', () => {
     applyIconLibraryAsset(board, {
       id: 'icon-3',
       name: 'brain',
-      url: 'data:image/svg+xml;base64,ccc',
+      dataUrl: 'data:image/svg+xml;base64,ccc',
+      thumbnailDataUrl: 'data:image/svg+xml;base64,ccc',
+      mimeType: 'image/svg+xml',
+      kind: 'svg',
+      source: 'local',
+      size: 128,
+      updatedAt: '2026-01-01T00:00:00.000Z',
+      tags: [],
+      favorite: false,
+      isSubject: false,
       width: 128,
       height: 64,
-      createdAt: 3,
+      createdAt: '2026-01-01T00:00:00.000Z',
     });
 
     expect(mockMindSetImage).toHaveBeenCalledWith(
@@ -171,8 +200,8 @@ describe('icon-library', () => {
       selectedMind,
       expect.objectContaining({
         url: 'data:image/svg+xml;base64,ccc',
-        width: 96,
-        height: 48,
+        width: 240,
+        height: 120,
       })
     );
   });

@@ -52,7 +52,10 @@ export const PopupFontColorButton: React.FC<PopupFontColorButtonProps> = ({
       <PopoverContent container={container}>
         <Island
           padding={4}
-          className={classNames(`${ATTACHED_ELEMENT_CLASS_NAME}`)}
+          className={classNames(
+            `${ATTACHED_ELEMENT_CLASS_NAME}`,
+            'popup-color-panel'
+          )}
         >
           <ColorPicker
             onColorChange={(selectedColor: string) => {
@@ -68,6 +71,7 @@ export const PopupFontColorButton: React.FC<PopupFontColorButtonProps> = ({
               }
             }}
             currentColor={currentColor}
+            label={title}
           ></ColorPicker>
         </Island>
       </PopoverContent>

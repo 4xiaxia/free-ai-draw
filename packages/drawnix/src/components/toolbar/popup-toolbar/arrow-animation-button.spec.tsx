@@ -10,7 +10,7 @@ jest.mock('../../tool-button', () => ({
     title,
     className,
     selected,
-    ['aria-label']: ariaLabel,
+    'aria-label': ariaLabel,
   }: {
     onClick?: () => void;
     title?: string;

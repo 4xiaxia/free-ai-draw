@@ -1,13 +1,13 @@
 import { render, screen } from '@testing-library/react';
 
+import { Text, toCssLength } from './text';
+
 jest.mock('@plait/text-plugins', () => ({
   isUrl: () => false,
   LinkEditor: {
     wrapLink: jest.fn(),
   },
 }));
-
-import { Text, toCssLength } from './text';
 
 describe('Text', () => {
   it('renders imported text successfully', () => {
@@ -17,10 +17,10 @@ describe('Text', () => {
         {
           text: 'Imported title',
           color: '#000000',
-          ['font-size']: '31.143',
-          ['line-height']: '31.143',
-          ['letter-spacing']: '1.25',
-          ['font-family']: 'Georgia, serif',
+          'font-size': '31.143',
+          'line-height': '31.143',
+          'letter-spacing': '1.25',
+          'font-family': 'Georgia, serif',
         },
       ],
     } as any;

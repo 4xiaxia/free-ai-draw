@@ -45,7 +45,7 @@ export const insertImage = async (
 ) => {
   const selectedElement =
     getSelectedElements(board)[0] || getElementOfFocusedImage(board);
-  const defaultImageWidth = selectedElement ? 240 : 400;
+  const defaultImageWidth = selectedElement ? 400 : 640;
   const dataURL = await getDataURL(imageFile);
   const image = await loadHTMLImageElement(dataURL);
   const imageItem = buildImage(image, dataURL, defaultImageWidth);

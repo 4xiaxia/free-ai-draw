@@ -42,6 +42,7 @@
     "mermaid": "10.9.5",
     "mobile-detect": "^1.4.5",
     "open-color": "^1.9.1",
+    "pptxgenjs": "^4.0.1",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "roughjs": "^4.6.6",

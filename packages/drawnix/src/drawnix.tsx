@@ -53,6 +53,9 @@ import { syncImageGenerationTasks } from './image-edit/image-generation-store';
 import { ImageGenerationRunner } from './image-edit/components/image-generation-runner';
 import { initialBoardAssemblyProgress } from './utils/board-assembly';
 import { BoardImportProgress } from './components/import/board-import-progress';
+import { SelectionPropertyPanel } from './components/toolbar/selection-property-panel/selection-property-panel';
+import { ArrowEndpointShapePicker } from './components/toolbar/arrow-endpoint-shape-picker/arrow-endpoint-shape-picker';
+import { CanvasStyleEffects } from './components/canvas-style-effects/canvas-style-effects';
 
 export type DrawnixProps = {
   value: PlaitElement[];
@@ -193,6 +196,9 @@ export const Drawnix: React.FC<DrawnixProps> = ({
             <ZoomToolbar></ZoomToolbar>
             <ThemeToolbar></ThemeToolbar>
             <PopupToolbar></PopupToolbar>
+            <ArrowEndpointShapePicker></ArrowEndpointShapePicker>
+            <SelectionPropertyPanel></SelectionPropertyPanel>
+            <CanvasStyleEffects></CanvasStyleEffects>
             <LinkPopup></LinkPopup>
             <ClosePencilToolbar></ClosePencilToolbar>
             <BoardImportProgress></BoardImportProgress>

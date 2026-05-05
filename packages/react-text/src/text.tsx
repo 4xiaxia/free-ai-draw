@@ -47,6 +47,22 @@ export const toCssLength = (value: unknown): string | undefined => {
   return undefined;
 };
 
+const toCssLineHeight = (value: unknown): string | number | undefined => {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  const numericValue =
+    typeof value === 'number'
+      ? value
+      : typeof value === 'string' && value.trim() && !/[a-z%]+$/i.test(value.trim())
+        ? Number.parseFloat(value)
+        : undefined;
+  if (typeof numericValue === 'number' && Number.isFinite(numericValue)) {
+    return numericValue <= 4 ? numericValue : `${numericValue}px`;
+  }
+  return toCssLength(value);
+};
+
 export const Text: React.FC<TextComponentProps> = (
   props: TextComponentProps
 ) => {
@@ -185,6 +201,10 @@ const Leaf: React.FC<RenderLeafProps> = ({ children, leaf, attributes }) => {
     children = <u>{children}</u>;
   }
 
+  if ((leaf as CustomText).strike) {
+    children = <s>{children}</s>;
+  }
+
   const fontSizeValue = (leaf as CustomText)['font-size'];
   const fontFamilyValue = (leaf as any)['font-family'] || (leaf as any).fontFamily;
   const fontWeightValue = (leaf as any).fontWeight;
@@ -193,17 +213,24 @@ const Leaf: React.FC<RenderLeafProps> = ({ children, leaf, attributes }) => {
   const letterSpacingValue =
     (leaf as any)['letter-spacing'] || (leaf as any).letterSpacing;
   const opacityValue = (leaf as any).opacity;
+  const verticalAlignValue = (leaf as any).verticalAlign;
+  const baselineShiftValue = (leaf as any).baselineShift;
   const style: CSSProperties = {
     color: (leaf as CustomText).color,
     ...(toCssLength(fontSizeValue) ? { fontSize: toCssLength(fontSizeValue) } : {}),
     ...(fontFamilyValue ? { fontFamily: fontFamilyValue } : {}),
     ...(fontWeightValue ? { fontWeight: fontWeightValue } : {}),
     ...(fontStyleValue ? { fontStyle: fontStyleValue } : {}),
-    ...(toCssLength(lineHeightValue) ? { lineHeight: toCssLength(lineHeightValue) } : {}),
+    ...(toCssLineHeight(lineHeightValue)
+      ? { lineHeight: toCssLineHeight(lineHeightValue) }
+      : {}),
     ...(toCssLength(letterSpacingValue)
       ? { letterSpacing: toCssLength(letterSpacingValue) }
       : {}),
     ...(opacityValue ? { opacity: Number(opacityValue) } : {}),
+    ...(verticalAlignValue || baselineShiftValue
+      ? { verticalAlign: verticalAlignValue || baselineShiftValue }
+      : {}),
   };
 
   return (

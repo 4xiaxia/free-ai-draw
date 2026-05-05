@@ -1,7 +1,4 @@
-import { getSelectedElements } from '@plait/core';
-import { download, exportBoardToRasterBlob } from './common';
-import { getBackgroundColor } from './color';
-import { saveAsImage } from './image';
+import { saveAsImage, saveAsSvg } from './image';
 
 const mockGetSelectedElements = jest.fn();
 const mockToSvgData = jest.fn();
@@ -13,40 +10,34 @@ const mockFileOpen = jest.fn();
 const mockInsertImage = jest.fn();
 
 jest.mock('@plait/core', () => ({
-  getSelectedElements: mockGetSelectedElements,
-  toSvgData: mockToSvgData,
+  getSelectedElements: (...args: unknown[]) => mockGetSelectedElements(...args),
+  toSvgData: (...args: unknown[]) => mockToSvgData(...args),
 }));
 
 jest.mock('./common', () => ({
-  download: mockDownload,
-  exportBoardToRasterBlob: mockExportBoardToRasterBlob,
+  download: (...args: unknown[]) => mockDownload(...args),
+  exportBoardToRasterBlob: (...args: unknown[]) =>
+    mockExportBoardToRasterBlob(...args),
 }));
 
 jest.mock('./color', () => ({
-  getBackgroundColor: mockGetBackgroundColor,
-  isWhite: mockIsWhite,
+  getBackgroundColor: (...args: unknown[]) => mockGetBackgroundColor(...args),
+  isWhite: (...args: unknown[]) => mockIsWhite(...args),
 }));
 
 jest.mock('../data/filesystem', () => ({
-  fileOpen: mockFileOpen,
+  fileOpen: (...args: unknown[]) => mockFileOpen(...args),
 }));
 
 jest.mock('../data/image', () => ({
-  insertImage: mockInsertImage,
+  insertImage: (...args: unknown[]) => mockInsertImage(...args),
 }));
 
 describe('saveAsImage', () => {
-  const getSelectedElementsMock = getSelectedElements as jest.MockedFunction<
-    typeof getSelectedElements
-  >;
-  const exportBoardToRasterBlobMock =
-    exportBoardToRasterBlob as jest.MockedFunction<
-      typeof exportBoardToRasterBlob
-    >;
-  const downloadMock = download as jest.MockedFunction<typeof download>;
-  const getBackgroundColorMock = getBackgroundColor as jest.MockedFunction<
-    typeof getBackgroundColor
-  >;
+  const getSelectedElementsMock = mockGetSelectedElements;
+  const exportBoardToRasterBlobMock = mockExportBoardToRasterBlob;
+  const downloadMock = mockDownload;
+  const getBackgroundColorMock = mockGetBackgroundColor;
 
   beforeEach(() => {
     jest.useFakeTimers().setSystemTime(new Date('2026-04-24T08:00:00Z'));
@@ -124,5 +115,29 @@ describe('saveAsImage', () => {
     expect(downloadMock).not.toHaveBeenCalled();
 
     consoleError.mockRestore();
+  });
+
+  it('exports SVG with transparent background when the board background is white', async () => {
+    const board = { children: [] } as any;
+    const selectedElements = [{ id: 'shape-1' }];
+    getSelectedElementsMock.mockReturnValue(selectedElements as any);
+    mockGetBackgroundColor.mockReturnValue('#ffffff');
+    mockIsWhite.mockReturnValue(true);
+    mockToSvgData.mockResolvedValue('<svg />');
+
+    await saveAsSvg(board);
+
+    expect(mockToSvgData).toHaveBeenCalledWith(board, {
+      fillStyle: 'TRANSPARENT',
+      padding: 20,
+      ratio: 4,
+      elements: selectedElements,
+      inlineStyleClassNames: '.plait-text-container',
+      styleNames: ['position'],
+    });
+    expect(downloadMock).toHaveBeenCalledWith(
+      expect.any(Blob),
+      expect.stringMatching(/^drawnix-\d+\.svg$/)
+    );
   });
 });

@@ -16,12 +16,12 @@ describe('scaleTextMetricBag', () => {
     const result = scaleTextMetricBag(
       {
         fontSize: 80,
-        ['font-size']: '80',
+        'font-size': '80',
         lineHeight: 96,
-        ['line-height']: '96',
+        'line-height': '96',
         letterSpacing: 4,
-        ['letter-spacing']: '4',
-        ['font-family']: 'Georgia, serif',
+        'letter-spacing': '4',
+        'font-family': 'Georgia, serif',
       },
       scaleStyleMetric
     ) as Record<string, unknown>;
@@ -29,12 +29,12 @@ describe('scaleTextMetricBag', () => {
     expect(result).toEqual(
       expect.objectContaining({
         fontSize: 40,
-        ['font-size']: '40',
+        'font-size': '40',
         lineHeight: 48,
-        ['line-height']: '48',
+        'line-height': '48',
         letterSpacing: 2,
-        ['letter-spacing']: '2',
-        ['font-family']: 'Georgia, serif',
+        'letter-spacing': '2',
+        'font-family': 'Georgia, serif',
       })
     );
   });

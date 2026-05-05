@@ -53,6 +53,7 @@ jest.mock('@floating-ui/react', () => ({
   }),
   offset: () => ({}),
   flip: () => ({}),
+  shift: () => ({}),
 }));
 
 jest.mock('@plait/core', () => ({
@@ -339,7 +340,7 @@ describe('PopupToolbar', () => {
         ],
         text: {
           type: 'paragraph',
-          children: [{ text: '标题', ['font-family']: 'Georgia, serif' }],
+          children: [{ text: '标题', 'font-family': 'Georgia, serif' }],
         },
         textStyle: {
           fontFamily: 'Georgia, serif',

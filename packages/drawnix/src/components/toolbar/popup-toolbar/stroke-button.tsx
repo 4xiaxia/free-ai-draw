@@ -90,6 +90,7 @@ export const PopupStrokeButton: React.FC<PopupStrokeButtonProps> = ({
           padding={4}
           className={classNames(
             `${ATTACHED_ELEMENT_CLASS_NAME}`,
+            'popup-color-panel',
             'stroke-setting',
             { 'has-stroke-style': hasStrokeStyle }
           )}
@@ -140,6 +141,7 @@ export const PopupStrokeButton: React.FC<PopupStrokeButtonProps> = ({
                 setStrokeColorOpacity(board, opacity);
               }}
               currentColor={currentColor}
+              label={title}
             ></ColorPicker>
           </Stack.Col>
         </Island>

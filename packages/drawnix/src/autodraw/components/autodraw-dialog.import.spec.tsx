@@ -1220,10 +1220,13 @@ describe('AutodrawDialog import semantics', () => {
       )
     ).toBeTruthy();
 
-    const historyPreviewImage = container.querySelector(
-      '.autodraw-history-card__preview .autodraw-asset-card__image'
-    ) as HTMLImageElement | null;
-    expect(historyPreviewImage).toBeTruthy();
+    let historyPreviewImage: HTMLImageElement | null = null;
+    await waitFor(() => {
+      historyPreviewImage = container.querySelector(
+        '.autodraw-history-card__preview .autodraw-asset-card__image'
+      ) as HTMLImageElement | null;
+      expect(historyPreviewImage).toBeTruthy();
+    });
     expect(historyPreviewImage?.getAttribute('src')).toContain('figure.png');
   });
 
@@ -1585,7 +1588,7 @@ describe('AutodrawDialog import semantics', () => {
       },
     });
     fireEvent.change(
-      screen.getByDisplayValue('icon,person,robot,animal,arrow'),
+      screen.getByDisplayValue('icon,person,robot,animal,CurvedArrow'),
       {
         target: {
           value: 'icon,diagram,arrow',
@@ -1717,7 +1720,7 @@ describe('AutodrawDialog import semantics', () => {
       expect(payload.source_figure_path).toBe('/tmp/source-figure.png');
       expect(payload.source_processing_mode).toBe('segmented');
       expect(payload.start_stage).toBe(2);
-      expect(payload.sam_prompt).toBe('icon,person,robot,animal,arrow');
+      expect(payload.sam_prompt).toBe('icon,person,robot,animal,CurvedArrow');
     });
   });
 

@@ -327,8 +327,8 @@ describe('convertSvgToDrawnix', () => {
     );
     expect((labelEl as any).textProperties).toEqual(
       expect.objectContaining({
-        ['font-size']: '20',
-        ['font-family']: expect.stringContaining('Arial'),
+        'font-size': '20',
+        'font-family': expect.stringContaining('Arial'),
       })
     );
     expect((labelEl as any).svgImportMetadata).toEqual(

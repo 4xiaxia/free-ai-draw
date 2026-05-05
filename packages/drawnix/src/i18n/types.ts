@@ -105,6 +105,7 @@ export interface Translations {
   'menu.exportImage.svg': string;
   'menu.exportImage.png': string;
   'menu.exportImage.jpg': string;
+  'menu.exportPptx': string;
   'menu.cleanBoard': string;
   'menu.github': string;
 
@@ -299,6 +300,39 @@ export interface Translations {
   'iconLibrary.empty': string;
   'iconLibrary.hint': string;
   'iconLibrary.remove': string;
+  'assetLibrary.search': string;
+  'assetLibrary.filter': string;
+  'assetLibrary.filter.all': string;
+  'assetLibrary.filter.image': string;
+  'assetLibrary.filter.svg': string;
+  'assetLibrary.filter.favorite': string;
+  'assetLibrary.sort': string;
+  'assetLibrary.sort.recent': string;
+  'assetLibrary.sort.name': string;
+  'assetLibrary.sort.size': string;
+  'assetLibrary.sort.type': string;
+  'assetLibrary.count': string;
+  'assetLibrary.dropHint': string;
+  'assetLibrary.emptyAction': string;
+  'assetLibrary.noResults': string;
+  'assetLibrary.unsupported': string;
+  'assetLibrary.uploadFailed': string;
+  'assetLibrary.type': string;
+  'assetLibrary.source': string;
+  'assetLibrary.source.local': string;
+  'assetLibrary.source.ai': string;
+  'assetLibrary.source.built-in': string;
+  'assetLibrary.createdAt': string;
+  'assetLibrary.size': string;
+  'assetLibrary.insert': string;
+  'assetLibrary.setSubject': string;
+  'assetLibrary.subjectSet': string;
+  'assetLibrary.favorite': string;
+  'assetLibrary.unfavorite': string;
+  'assetLibrary.download': string;
+  'assetLibrary.rename': string;
+  'assetLibrary.selectAsset': string;
+  'assetLibrary.usage': string;
 
   // Text placeholders
   'textPlaceholders.link': string;

@@ -15,7 +15,7 @@ import {
 } from '@plait/core';
 import { useEffect, useRef, useState } from 'react';
 import { useBoard } from '@plait-board/react-board';
-import { flip, offset, useFloating } from '@floating-ui/react';
+import { flip, offset, shift, useFloating } from '@floating-ui/react';
 import { Island } from '../../island';
 import classNames from 'classnames';
 import { useI18n } from '../../../i18n';
@@ -80,7 +80,15 @@ export const PopupToolbar = () => {
   const { viewport, selection, children } = board;
   const { refs, floatingStyles } = useFloating({
     placement: 'right-start',
-    middleware: [offset(32), flip()],
+    middleware: [
+      offset(32),
+      flip({
+        padding: { top: 24, right: 376, bottom: 24, left: 24 },
+      }),
+      shift({
+        padding: { top: 24, right: 376, bottom: 24, left: 24 },
+      }),
+    ],
   });
   let state: {
     fill: string | undefined;
@@ -124,7 +132,9 @@ export const PopupToolbar = () => {
       !PlaitBoard.hasBeenTextEditing(board);
     const hasCornerRadius =
       selectedElements.length > 0 &&
-      selectedElements.every((value) => hasRectangleCornerRadiusProperty(value)) &&
+      selectedElements.every((value) =>
+        hasRectangleCornerRadiusProperty(value)
+      ) &&
       !PlaitBoard.hasBeenTextEditing(board);
     const isLine = selectedElements.every((value) =>
       PlaitDrawElement.isArrowLine(value)
@@ -224,6 +234,11 @@ export const PopupToolbar = () => {
     };
   }, [board]);
 
+  const hasTextGroup =
+    state.hasFontFamily || state.hasText || state.hasFontColor;
+  const hasStyleGroup =
+    state.hasStroke || state.hasFill || state.hasCornerRadius;
+
   return (
     <>
       {open && !movingOrDragging && (
@@ -234,90 +249,100 @@ export const PopupToolbar = () => {
           style={floatingStyles}
         >
           <Stack.Row gap={1} className="popup-toolbar__row">
-            {state.hasFontFamily && (
-              <PopupFontFamilyControl
-                board={board}
-                key={'font-family'}
-                currentFontFamily={getCurrentFontFamily(board, state.marks)}
-                title={t('popupToolbar.fontFamily')}
-              />
+            {hasTextGroup && (
+              <div className="popup-toolbar__group popup-toolbar__group--text">
+                {state.hasFontFamily && (
+                  <PopupFontFamilyControl
+                    board={board}
+                    key={'font-family'}
+                    currentFontFamily={getCurrentFontFamily(board, state.marks)}
+                    title={t('popupToolbar.fontFamily')}
+                  />
+                )}
+                {state.hasText && (
+                  <PopupFontSizeControl
+                    board={board}
+                    key={'font-size'}
+                    currentFontSize={getFontSizeFromMarks(state.marks)}
+                    title={t('popupToolbar.fontSize')}
+                  />
+                )}
+                {state.hasFontColor && (
+                  <PopupFontColorButton
+                    board={board}
+                    key={0}
+                    currentColor={state.marks?.color}
+                    title={t('popupToolbar.fontColor')}
+                    fontColorIcon={
+                      <FontColorIcon currentColor={state.marks?.color} />
+                    }
+                  ></PopupFontColorButton>
+                )}
+                {state.hasText && (
+                  <PopupLinkButton
+                    board={board}
+                    title={t('popupToolbar.link')}
+                  ></PopupLinkButton>
+                )}
+              </div>
             )}
-            {state.hasText && (
-              <PopupFontSizeControl
-                board={board}
-                key={'font-size'}
-                currentFontSize={getFontSizeFromMarks(state.marks)}
-                title={t('popupToolbar.fontSize')}
-              />
-            )}
-            {state.hasFontColor && (
-              <PopupFontColorButton
-                board={board}
-                key={0}
-                currentColor={state.marks?.color}
-                title={t('popupToolbar.fontColor')}
-                fontColorIcon={
-                  <FontColorIcon currentColor={state.marks?.color} />
-                }
-              ></PopupFontColorButton>
-            )}
-            {state.hasStroke && (
-              <PopupStrokeButton
-                board={board}
-                key={1}
-                currentColor={state.strokeColor}
-                currentStyle={state.strokeStyle}
-                title={t('popupToolbar.stroke')}
-                hasStrokeStyle={state.hasStrokeStyle || false}
-              >
-                <label
-                  className={classNames('stroke-label', 'color-label')}
-                  style={{ borderColor: state.strokeColor }}
-                ></label>
-              </PopupStrokeButton>
-            )}
-            {state.hasFill && (
-              <PopupFillButton
-                board={board}
-                key={2}
-                currentColor={state.fill}
-                title={t('popupToolbar.fillColor')}
-              >
-                <label
-                  className={classNames('fill-label', 'color-label', {
-                    'color-white':
-                      state.fill && isWhite(removeHexAlpha(state.fill)),
-                  })}
-                  style={{ backgroundColor: state.fill }}
-                ></label>
-              </PopupFillButton>
-            )}
-            {state.hasCornerRadius && (
-              <PopupRectangleRadiusControl
-                board={board}
-                currentRadius={state.cornerRadius}
-                maxRadius={state.cornerRadiusMax || 0}
-                title={t('popupToolbar.cornerRadius')}
-              />
-            )}
-            {state.hasText && (
-              <PopupLinkButton
-                board={board}
-                title={t('popupToolbar.link')}
-              ></PopupLinkButton>
+            {hasStyleGroup && (
+              <div className="popup-toolbar__group popup-toolbar__group--style">
+                {state.hasStroke && (
+                  <PopupStrokeButton
+                    board={board}
+                    key={1}
+                    currentColor={state.strokeColor}
+                    currentStyle={state.strokeStyle}
+                    title={t('popupToolbar.stroke')}
+                    hasStrokeStyle={state.hasStrokeStyle || false}
+                  >
+                    <label
+                      className={classNames('stroke-label', 'color-label')}
+                      style={{ borderColor: state.strokeColor }}
+                    ></label>
+                  </PopupStrokeButton>
+                )}
+                {state.hasFill && (
+                  <PopupFillButton
+                    board={board}
+                    key={2}
+                    currentColor={state.fill}
+                    title={t('popupToolbar.fillColor')}
+                  >
+                    <label
+                      className={classNames('fill-label', 'color-label', {
+                        'color-white':
+                          state.fill && isWhite(removeHexAlpha(state.fill)),
+                      })}
+                      style={{ backgroundColor: state.fill }}
+                    ></label>
+                  </PopupFillButton>
+                )}
+                {state.hasCornerRadius && (
+                  <PopupRectangleRadiusControl
+                    board={board}
+                    currentRadius={state.cornerRadius}
+                    maxRadius={state.cornerRadiusMax || 0}
+                    title={t('popupToolbar.cornerRadius')}
+                  />
+                )}
+              </div>
             )}
             {isSingleSelectedPlainImage && (
-              <>
+              <div className="popup-toolbar__group popup-toolbar__group--image">
                 <ReplaceImageButton
                   board={board}
                   targetId={selectedElements[0].id}
                 />
                 <AIImageEditButton targetId={selectedElements[0].id} />
-              </>
+              </div>
             )}
-            <ArrangeButton board={board} />
+            <div className="popup-toolbar__group popup-toolbar__group--layout">
+              <ArrangeButton board={board} />
+            </div>
             {state.isLine && (
-              <>
+              <div className="popup-toolbar__group popup-toolbar__group--line">
                 <ArrowAnimationButton
                   board={board}
                   animation={state.animation}
@@ -332,9 +357,11 @@ export const PopupToolbar = () => {
                   end={'target'}
                   endProperty={state.target}
                 />
-              </>
+              </div>
             )}
-            <MoreOptionsButton board={board} />
+            <div className="popup-toolbar__group popup-toolbar__group--more">
+              <MoreOptionsButton board={board} />
+            </div>
           </Stack.Row>
         </Island>
       )}

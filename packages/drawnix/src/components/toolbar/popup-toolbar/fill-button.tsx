@@ -64,7 +64,10 @@ export const PopupFillButton: React.FC<PopupFillButtonProps> = ({
       <PopoverContent container={container}>
         <Island
           padding={4}
-          className={classNames(`${ATTACHED_ELEMENT_CLASS_NAME}`)}
+          className={classNames(
+            `${ATTACHED_ELEMENT_CLASS_NAME}`,
+            'popup-color-panel'
+          )}
         >
           <ColorPicker
             onColorChange={(selectedColor: string) => {
@@ -74,6 +77,7 @@ export const PopupFillButton: React.FC<PopupFillButtonProps> = ({
               setFillColorOpacity(board, opacity);
             }}
             currentColor={currentColor}
+            label={title}
           ></ColorPicker>
         </Island>
       </PopoverContent>

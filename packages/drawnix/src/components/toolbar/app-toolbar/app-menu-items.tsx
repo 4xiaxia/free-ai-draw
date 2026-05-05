@@ -27,6 +27,7 @@ import {
 import MenuItem from '../../menu/menu-item';
 import MenuItemLink from '../../menu/menu-item-link';
 import { saveAsImage, saveAsSvg } from '../../../utils/image';
+import { saveAsPptx } from '../../../utils/pptx-export';
 import { useDrawnix } from '../../../hooks/use-drawnix';
 import { useI18n } from '../../../i18n';
 import Menu from '../../menu/menu';
@@ -239,6 +240,26 @@ export const SaveAsImage = () => {
   );
 };
 SaveAsImage.displayName = 'SaveAsImage';
+
+export const SaveAsPptx = () => {
+  const board = useBoard();
+  const { t } = useI18n();
+  return (
+    <MenuItem
+      icon={ExportImageIcon}
+      data-testid="pptx-export-button"
+      onSelect={() => {
+        saveAsPptx(board).catch((error) => {
+          console.error('Error exporting pptx:', error);
+        });
+      }}
+      aria-label={t('menu.exportPptx')}
+    >
+      {t('menu.exportPptx')}
+    </MenuItem>
+  );
+};
+SaveAsPptx.displayName = 'SaveAsPptx';
 
 export const CleanBoard = () => {
   const { appState, setAppState } = useDrawnix();

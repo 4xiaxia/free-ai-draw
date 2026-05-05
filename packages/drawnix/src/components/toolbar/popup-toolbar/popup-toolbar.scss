@@ -1,35 +1,67 @@
 .popup-toolbar {
-  background: rgba(255, 255, 255, 0.98);
-  border-color: rgba(102, 152, 255, 0.16);
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.14),
-    0 2px 8px rgba(15, 23, 42, 0.08);
+  --popup-toolbar-button-size: 34px;
+  --popup-toolbar-radius: 10px;
+  background: #fffffe;
+  border-color: rgba(17, 24, 39, 0.1);
+  border-radius: 13px;
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.12),
+    0 1px 2px rgba(15, 23, 42, 0.1);
 
   .popup-toolbar__row {
     align-items: center;
+    gap: 4px;
+  }
+
+  .popup-toolbar__group {
+    min-height: 38px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px;
+    border-radius: 11px;
+    background: #f7f8fb;
+    box-shadow: inset 0 0 0 1px rgba(17, 24, 39, 0.04);
+  }
+
+  .popup-toolbar__group + .popup-toolbar__group {
+    margin-left: 4px;
+  }
+
+  .popup-toolbar__group--more {
+    background: transparent;
+    box-shadow: none;
   }
 
   .popup-font-family {
-    height: var(--lg-button-size);
+    height: var(--popup-toolbar-button-size);
     min-width: 108px;
     max-width: 164px;
     display: inline-flex;
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    padding: 0 10px 0 12px;
+    padding: 0 9px 0 10px;
     border: none;
-    border-radius: var(--border-radius-sm);
-    background-color: var(--color-surface-secondary-container);
+    border-radius: 8px;
+    background-color: #ffffff;
     color: var(--color-on-surface);
-    box-shadow: inset 0 0 0 1px rgba(17, 24, 39, 0.05);
+    box-shadow: inset 0 0 0 1px rgba(17, 24, 39, 0.08);
     cursor: pointer;
+    transition: transform 120ms ease, background-color 120ms ease,
+      box-shadow 120ms ease;
+
     &:not([data-disable-hover]):hover {
-      background-color: var(--color-surface-primary-container);
+      background-color: #f9fafb;
+      box-shadow: inset 0 0 0 1px rgba(17, 24, 39, 0.14);
+    }
+
+    &:active {
+      transform: scale(0.96);
     }
 
     &[data-state='open'] {
-      background-color: var(--color-surface-primary-container);
-      box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.18);
+      background-color: #eef2f7;
+      box-shadow: inset 0 0 0 1px rgba(17, 24, 39, 0.16);
     }
   }
   .popup-font-family__label {
@@ -125,16 +157,25 @@
   }
   .popup-font-size,
   .popup-rectangle-radius {
-    height: var(--lg-button-size);
+    height: var(--popup-toolbar-button-size);
     display: flex;
     align-items: center;
     gap: 2px;
-    padding: 0 4px 0 4px;
-    border-radius: var(--border-radius-sm);
-    background-color: var(--color-surface-secondary-container);
+    padding: 0 4px;
+    border-radius: 8px;
+    background-color: #ffffff;
     color: var(--color-on-surface);
+    box-shadow: inset 0 0 0 1px rgba(17, 24, 39, 0.08);
+    transition: transform 120ms ease, background-color 120ms ease,
+      box-shadow 120ms ease;
+
     &:not([data-disable-hover]):hover {
-      background-color: var(--color-surface-primary-container);
+      background-color: #f9fafb;
+      box-shadow: inset 0 0 0 1px rgba(17, 24, 39, 0.14);
+    }
+
+    &:active {
+      transform: scale(0.96);
     }
   }
   .popup-rectangle-radius {
@@ -232,38 +273,64 @@
     color: #667085;
   }
   .property-button {
-    height: var(--lg-button-size);
-    width: var(--lg-button-size);
-    border-radius: 10px;
+    height: var(--popup-toolbar-button-size);
+    width: var(--popup-toolbar-button-size);
+    border-radius: 8px;
+    background: #ffffff;
+    color: #344054;
+    box-shadow: inset 0 0 0 1px rgba(17, 24, 39, 0.08);
+    transition: transform 120ms ease, background-color 120ms ease,
+      box-shadow 120ms ease, color 120ms ease;
+
+    &:hover {
+      background: #f9fafb;
+      box-shadow: inset 0 0 0 1px rgba(17, 24, 39, 0.14);
+    }
+
+    &.tool-icon--selected {
+      background: #eef2f7;
+      color: #111827;
+      box-shadow: inset 0 0 0 1px rgba(17, 24, 39, 0.16),
+        inset 0 1px 2px rgba(15, 23, 42, 0.08);
+
+      svg {
+        color: #111827;
+      }
+    }
+
     .color-label {
       cursor: pointer;
     }
     .fill-label {
       display: inline-block;
-      width: var(--popup-label-size);
-      height: var(--popup-label-size);
-      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      border-radius: 7px;
+      box-shadow: inset 0 0 0 1px rgba(17, 24, 39, 0.12);
       &.color-white {
-        border: 1px solid var(--color-gray-30);
+        box-shadow: inset 0 0 0 1px rgba(17, 24, 39, 0.18);
       }
     }
     .stroke-label {
-      border-radius: 50%;
-      width: calc(var(--popup-label-size) - var(--border-radius-lg));
-      height: calc(var(--popup-label-size) - var(--border-radius-lg));
-      border-width: var(--border-radius-sm);
+      border-radius: 7px;
+      width: 18px;
+      height: 18px;
+      border-width: 3px;
       border-style: solid;
+      background: #ffffff;
     }
     .tool-icon__icon {
+      width: var(--popup-toolbar-button-size);
+      height: var(--popup-toolbar-button-size);
       svg {
-        width: var(--xlg-icon-size);
-        height: var(--xlg-icon-size);
+        width: 18px;
+        height: 18px;
       }
     }
   }
 
   .popup-arrange-trigger.tool-icon--selected {
-    background: var(--color-surface-primary-container);
+    background: #eef2f7;
   }
 
   .popup-ai-style-button {
@@ -279,20 +346,24 @@
   }
 
   .popup-ai-image-edit-button {
-    background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
-    box-shadow: inset 0 0 0 1px rgba(124, 58, 237, 0.12);
+    background: #fff7ed;
+    color: #9a3412;
+    box-shadow: inset 0 0 0 1px rgba(154, 52, 18, 0.14);
 
     &:hover {
-      background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+      background: #ffedd5;
+      box-shadow: inset 0 0 0 1px rgba(154, 52, 18, 0.22);
     }
   }
 
   .popup-replace-image-button {
-    background: linear-gradient(135deg, #eef6ff 0%, #e0ecff 100%);
-    box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.12);
+    background: #f8fafc;
+    color: #344054;
+    box-shadow: inset 0 0 0 1px rgba(17, 24, 39, 0.1);
 
     &:hover {
-      background: linear-gradient(135deg, #e0ecff 0%, #d5e4ff 100%);
+      background: #eef2f7;
+      box-shadow: inset 0 0 0 1px rgba(17, 24, 39, 0.16);
     }
   }
 
@@ -304,13 +375,9 @@
     &::before {
       content: '';
       position: absolute;
-      inset: 5px;
-      border-radius: 8px;
-      background: radial-gradient(
-        circle at center,
-        rgba(59, 130, 246, 0.26) 0%,
-        rgba(59, 130, 246, 0) 72%
-      );
+      inset: 6px;
+      border-radius: 6px;
+      background: rgba(17, 24, 39, 0.08);
       opacity: 0;
       transform: scale(0.82);
       transition: opacity 180ms ease, transform 180ms ease;
@@ -350,9 +417,9 @@
     }
 
     &.popup-arrow-animation-button--enabled {
-      background: linear-gradient(135deg, #eef5ff 0%, #dbeafe 100%);
-      box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.22),
-        0 8px 18px rgba(37, 99, 235, 0.16);
+      background: #eef2f7;
+      box-shadow: inset 0 0 0 1px rgba(17, 24, 39, 0.18),
+        inset 0 1px 2px rgba(15, 23, 42, 0.08);
 
       &::before {
         opacity: 1;
@@ -360,7 +427,7 @@
       }
 
       .tool-icon__icon {
-        color: #1d4ed8;
+        color: #111827;
       }
 
       .popup-arrow-animation-icon__trail {
@@ -418,11 +485,11 @@
 .popup-arrange-panel {
   width: 248px;
   padding: 12px;
-  border: 1px solid rgba(102, 152, 255, 0.14);
-  border-radius: 14px;
-  background: #ffffff;
-  box-shadow: 0 20px 44px rgba(15, 23, 42, 0.18),
-    0 2px 10px rgba(15, 23, 42, 0.08);
+  border: 1px solid rgba(17, 24, 39, 0.1);
+  border-radius: 13px;
+  background: #fffffe;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.14),
+    0 1px 2px rgba(15, 23, 42, 0.1);
   box-sizing: border-box;
 
   .popup-arrange-panel__header {
@@ -444,8 +511,8 @@
     flex-shrink: 0;
     padding: 3px 8px;
     border-radius: 999px;
-    background: #f4f7ff;
-    color: #3b5ccc;
+    background: #eef2f7;
+    color: #344054;
     font-size: 11px;
     line-height: 1.2;
     font-weight: 600;
@@ -454,7 +521,7 @@
   .popup-arrange-panel__divider {
     height: 1px;
     margin: 10px 0;
-    background: rgba(15, 23, 42, 0.08);
+    background: rgba(17, 24, 39, 0.08);
   }
 
   .popup-arrange-panel__subheading {
@@ -486,22 +553,22 @@
     min-height: 72px;
     padding: 10px 8px;
     border: 1px solid rgba(15, 23, 42, 0.08);
-    border-radius: 12px;
-    background: #fbfcfe;
+    border-radius: 10px;
+    background: #f8fafc;
     color: #344054;
     cursor: pointer;
     transition: transform 120ms ease, border-color 120ms ease,
       background-color 120ms ease, box-shadow 120ms ease;
 
     &:hover {
-      background: #f4f7ff;
-      border-color: rgba(102, 152, 255, 0.26);
-      box-shadow: inset 0 0 0 1px rgba(102, 152, 255, 0.08);
+      background: #ffffff;
+      border-color: rgba(17, 24, 39, 0.18);
+      box-shadow: 0 6px 14px rgba(15, 23, 42, 0.1);
     }
 
     &:active {
       transform: scale(0.96);
-      background: #eef4ff;
+      background: #eef2f7;
     }
   }
 
@@ -513,7 +580,7 @@
     height: 28px;
     border-radius: 9px;
     background: #ffffff;
-    box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.06);
+    box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08);
 
     svg {
       width: 16px;
@@ -533,13 +600,44 @@
 .popup-ai-style-content {
   z-index: 40;
 }
+
+.popup-color-panel.island {
+  padding: 12px !important;
+  border-color: rgba(17, 24, 39, 0.1);
+  border-radius: 13px;
+  background: #fffffe;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.14),
+    0 1px 2px rgba(15, 23, 42, 0.1);
+}
+
 .stroke-setting {
   &.has-stroke-style {
-    padding-top: 8px !important;
+    padding-top: 10px !important;
   }
   .stroke-style-picker {
     justify-content: space-between;
-    padding: 0 8px;
+    gap: 6px;
+    padding: 0 0 10px;
+    border-bottom: 1px solid rgba(17, 24, 39, 0.08);
+    margin-bottom: 10px;
+
+    .tool-icon_type_button {
+      width: 40px;
+      height: 34px;
+      border-radius: 8px;
+      background: #f8fafc;
+      box-shadow: inset 0 0 0 1px rgba(17, 24, 39, 0.08);
+
+      &:hover {
+        background: #ffffff;
+        box-shadow: inset 0 0 0 1px rgba(17, 24, 39, 0.16);
+      }
+
+      &.tool-icon--selected {
+        background: #eef2f7;
+        box-shadow: inset 0 0 0 1px rgba(17, 24, 39, 0.18);
+      }
+    }
   }
 }
 

@@ -1,7 +1,6 @@
 import { getElementOfFocusedImage } from '@plait/common';
 import {
   getSelectedElements,
-  idCreator,
   PlaitBoard,
   PlaitHistoryBoard,
   Point,
@@ -10,39 +9,22 @@ import {
 import { DrawTransforms, PlaitDrawElement } from '@plait/draw';
 import { MindElement, MindTransforms } from '@plait/mind';
 import { IMAGE_MIME_TYPES } from '../constants';
-import { getDataURL } from '../data/blob';
 import { fileOpen } from '../data/filesystem';
-import { loadHTMLImageElement } from '../data/image';
+import type { AssetLibraryItem } from '../asset-library/types';
+import { createAssetLibraryItemsFromFiles } from '../asset-library/utils';
 
-export interface IconLibraryAsset {
-  id: string;
-  name: string;
-  url: string;
-  width: number;
-  height: number;
-  createdAt: number;
-}
+export type IconLibraryAsset = AssetLibraryItem;
 
 export const ICON_LIBRARY_STORAGE_KEY = 'drawnix-icon-library-assets';
-export const DEFAULT_ICON_INSERT_MAX_SIDE = 96;
+export const DEFAULT_ICON_INSERT_MAX_SIDE = 520;
+export const DEFAULT_ICON_INSERT_MIN_SIDE = 120;
 
-const normalizeDimension = (value: unknown, fallback = DEFAULT_ICON_INSERT_MAX_SIDE) => {
+const normalizeDimension = (
+  value: unknown,
+  fallback = DEFAULT_ICON_INSERT_MAX_SIDE
+) => {
   const dimension = Number(value);
   return Number.isFinite(dimension) && dimension > 0 ? dimension : fallback;
-};
-
-const sanitizeIconName = (name: string) => {
-  const normalized = name.replace(/\.[^.]+$/, '').trim();
-  return normalized || 'icon';
-};
-
-const isIconLibraryAsset = (value: unknown): value is IconLibraryAsset => {
-  const asset = value as IconLibraryAsset | null;
-  return !!asset
-    && typeof asset.id === 'string'
-    && typeof asset.name === 'string'
-    && typeof asset.url === 'string'
-    && typeof asset.createdAt === 'number';
 };
 
 const clonePoints = (points: Point[] | undefined) => {
@@ -56,13 +38,17 @@ const buildInsertedImageItem = (asset: IconLibraryAsset) => {
   const width = normalizeDimension(asset.width);
   const height = normalizeDimension(asset.height);
   const maxSide = Math.max(width, height);
-  const scale =
-    maxSide > DEFAULT_ICON_INSERT_MAX_SIDE
-      ? DEFAULT_ICON_INSERT_MAX_SIDE / maxSide
-      : 1;
+  const minSide = Math.min(width, height);
+
+  let scale = 1;
+  if (maxSide > DEFAULT_ICON_INSERT_MAX_SIDE) {
+    scale = DEFAULT_ICON_INSERT_MAX_SIDE / maxSide;
+  } else if (minSide < DEFAULT_ICON_INSERT_MIN_SIDE) {
+    scale = DEFAULT_ICON_INSERT_MIN_SIDE / minSide;
+  }
 
   return {
-    url: asset.url,
+    url: asset.dataUrl,
     width: Math.max(1, Math.round(width * scale)),
     height: Math.max(1, Math.round(height * scale)),
   };
@@ -80,7 +66,9 @@ export const isReplaceableDrawElement = (element: unknown) => {
   if (PlaitDrawElement.isImage(element)) {
     return true;
   }
-  return PlaitDrawElement.isGeometry(element) && !PlaitDrawElement.isText(element);
+  return (
+    PlaitDrawElement.isGeometry(element) && !PlaitDrawElement.isText(element)
+  );
 };
 
 export const canReplaceSelectionWithIcon = (board: PlaitBoard) => {
@@ -94,65 +82,20 @@ export const canReplaceSelectionWithIcon = (board: PlaitBoard) => {
   return isReplaceableDrawElement(selectedElement);
 };
 
-export const loadStoredIconLibraryAssets = () => {
-  if (typeof localStorage === 'undefined') {
-    return [] as IconLibraryAsset[];
-  }
-  const raw = localStorage.getItem(ICON_LIBRARY_STORAGE_KEY);
-  if (!raw) {
-    return [] as IconLibraryAsset[];
-  }
-  try {
-    const parsed = JSON.parse(raw) as unknown[];
-    if (!Array.isArray(parsed)) {
-      return [] as IconLibraryAsset[];
-    }
-    return parsed.filter(isIconLibraryAsset).map((asset) => ({
-      ...asset,
-      width: normalizeDimension(asset.width),
-      height: normalizeDimension(asset.height),
-    }));
-  } catch {
-    return [] as IconLibraryAsset[];
-  }
-};
+export const loadStoredIconLibraryAssets = () => [] as IconLibraryAsset[];
 
-export const saveStoredIconLibraryAssets = (assets: IconLibraryAsset[]) => {
-  if (typeof localStorage === 'undefined') {
-    return;
-  }
-  localStorage.setItem(ICON_LIBRARY_STORAGE_KEY, JSON.stringify(assets));
-};
+export const saveStoredIconLibraryAssets = (_assets: IconLibraryAsset[]) => {};
 
 export const pickIconLibraryFiles = async () => {
   return fileOpen<true>({
-    description: 'Icon assets',
-    extensions: Object.keys(
-      IMAGE_MIME_TYPES
-    ) as (keyof typeof IMAGE_MIME_TYPES)[],
+    description: 'Assets',
+    extensions: ['svg', 'png', 'jpg', 'webp'] as (keyof typeof IMAGE_MIME_TYPES)[],
     multiple: true,
   });
 };
 
 export const loadIconLibraryAssetsFromFiles = async (files: File[]) => {
-  const results = await Promise.allSettled(
-    files.map(async (file) => {
-      const dataURL = await getDataURL(file);
-      const image = await loadHTMLImageElement(dataURL);
-      return {
-        id: idCreator(),
-        name: sanitizeIconName(file.name),
-        url: dataURL,
-        width: normalizeDimension(image.width),
-        height: normalizeDimension(image.height),
-        createdAt: Date.now(),
-      } satisfies IconLibraryAsset;
-    })
-  );
-
-  return results.flatMap((result) => {
-    return result.status === 'fulfilled' ? [result.value] : [];
-  });
+  return createAssetLibraryItemsFromFiles(files);
 };
 
 export const replaceDrawElementWithIcon = (
@@ -163,11 +106,9 @@ export const replaceDrawElementWithIcon = (
   const path = PlaitBoard.findPath(board, element as any);
   const patch = {
     type: 'image' as const,
-    url: asset.url,
+    url: asset.dataUrl,
     points: clonePoints(element.points),
-    angle: typeof element.angle === 'number'
-      ? element.angle
-      : 0,
+    angle: typeof element.angle === 'number' ? element.angle : 0,
     shape: undefined,
     text: undefined,
     texts: undefined,

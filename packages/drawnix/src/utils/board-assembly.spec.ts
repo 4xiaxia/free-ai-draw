@@ -1,13 +1,13 @@
+import {
+  buildBoardImportBatches,
+  loadBoardElementsWithAssembly,
+} from './board-assembly';
+
 jest.mock('@plait/core', () => ({
   PlaitElement: {
     getElementG: () => null,
   },
 }));
-
-import {
-  buildBoardImportBatches,
-  loadBoardElementsWithAssembly,
-} from './board-assembly';
 
 describe('board assembly', () => {
   const originalMatchMedia = window.matchMedia;

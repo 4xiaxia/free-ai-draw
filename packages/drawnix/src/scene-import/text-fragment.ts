@@ -15,6 +15,7 @@ export interface SceneTextFragmentRunMetadata {
     strokeWidth?: number;
     lineHeight?: number;
     letterSpacing?: number;
+    baselineShift?: string;
     opacity?: number;
   };
   layout?: {
@@ -47,6 +48,7 @@ interface BaseTextFragmentMetadata {
     strokeWidth?: number;
     lineHeight?: number;
     letterSpacing?: number;
+    baselineShift?: string;
     opacity?: number;
   };
   layout: {
@@ -146,6 +148,7 @@ export const buildTextFragmentDataUrl = (
   const strokeWidth = metadata.style.strokeWidth ?? 0;
   const opacity =
     typeof metadata.style.opacity === 'number' ? metadata.style.opacity : 1;
+  const baselineShift = metadata.style.baselineShift;
   const letterSpacing =
     typeof metadata.style.letterSpacing === 'number'
       ? metadata.style.letterSpacing
@@ -160,6 +163,9 @@ export const buildTextFragmentDataUrl = (
   const letterSpacingAttr =
     letterSpacing !== 0 ? ` letter-spacing="${letterSpacing}"` : '';
   const opacityAttr = opacity !== 1 ? ` opacity="${opacity}"` : '';
+  const baselineShiftAttr = baselineShift
+    ? ` baseline-shift="${escapeXml(baselineShift)}"`
+    : '';
   const textLengthAttr =
     metadata.textLength && metadata.textLength > 0
       ? ` textLength="${metadata.textLength}"`
@@ -193,6 +199,8 @@ export const buildTextFragmentDataUrl = (
                 : letterSpacing;
             const runOpacity =
               typeof run.style?.opacity === 'number' ? run.style.opacity : opacity;
+            const runBaselineShift =
+              run.style?.baselineShift ?? baselineShift;
             const runStrokeAttrs =
               runStroke && runStroke !== 'none' && runStroke !== 'transparent'
                 ? ` stroke="${escapeXml(runStroke)}" stroke-width="${runStrokeWidth}" paint-order="stroke"`
@@ -200,6 +208,9 @@ export const buildTextFragmentDataUrl = (
             const runLetterSpacingAttr =
               runLetterSpacing !== 0 ? ` letter-spacing="${runLetterSpacing}"` : '';
             const runOpacityAttr = runOpacity !== 1 ? ` opacity="${runOpacity}"` : '';
+            const runBaselineShiftAttr = runBaselineShift
+              ? ` baseline-shift="${escapeXml(runBaselineShift)}"`
+              : '';
             const runLayoutAttrs = [
               run.layout?.x !== undefined ? `x="${run.layout.x}"` : '',
               run.layout?.y !== undefined ? `y="${run.layout.y}"` : '',
@@ -212,7 +223,7 @@ export const buildTextFragmentDataUrl = (
               String(runFontWeight)
             )}" font-style="${escapeXml(runFontStyle)}" fill="${escapeXml(
               runFill
-            )}"${runStrokeAttrs}${runLetterSpacingAttr}${runOpacityAttr}>${runText}</tspan>`;
+            )}"${runStrokeAttrs}${runLetterSpacingAttr}${runOpacityAttr}${runBaselineShiftAttr}>${runText}</tspan>`;
           })
           .join('')
       : escapeXml(metadata.text);
@@ -229,7 +240,7 @@ export const buildTextFragmentDataUrl = (
     font-weight="${escapeXml(String(fontWeight))}"
     font-style="${escapeXml(fontStyle)}"
     xml:space="preserve"
-    fill="${escapeXml(fill)}"${strokeAttrs}${letterSpacingAttr}${opacityAttr}${textLengthAttr}${lengthAdjustAttr}${transform}
+    fill="${escapeXml(fill)}"${strokeAttrs}${letterSpacingAttr}${opacityAttr}${baselineShiftAttr}${textLengthAttr}${lengthAdjustAttr}${transform}
   >${runsMarkup}</text>
 </svg>`.trim();
 

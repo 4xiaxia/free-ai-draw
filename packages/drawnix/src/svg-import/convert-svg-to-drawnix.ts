@@ -969,17 +969,17 @@ const buildTextElement = (item: SvgImportTextItem): SvgImportedElement => {
       textStyle: {
         align,
         fontSize: item.fontSize,
-        ['font-size']: String(item.fontSize),
+        'font-size': String(item.fontSize),
         color: item.fill || '#000000',
         fontFamily,
-        ['font-family']: fontFamily,
+        'font-family': fontFamily,
         fontWeight: item.fontWeight,
         fontStyle: item.fontStyle,
         lineHeight,
-        ['line-height']:
+        'line-height':
           typeof lineHeight === 'number' ? String(lineHeight) : undefined,
         letterSpacing: item.letterSpacing,
-        ['letter-spacing']:
+        'letter-spacing':
           typeof item.letterSpacing === 'number' ? String(item.letterSpacing) : undefined,
         opacity: item.opacity,
       },
@@ -989,14 +989,14 @@ const buildTextElement = (item: SvgImportTextItem): SvgImportedElement => {
       color: item.fill || '#000000',
       bold: isBold || undefined,
       italic: isItalic || undefined,
-      ['font-size']: String(item.fontSize),
+      'font-size': String(item.fontSize),
       fontFamily,
-      ['font-family']: fontFamily,
+      'font-family': fontFamily,
       fontWeight: item.fontWeight,
       fontStyle: item.fontStyle,
-      ['line-height']:
+      'line-height':
         typeof lineHeight === 'number' ? String(lineHeight) : undefined,
-      ['letter-spacing']:
+      'letter-spacing':
         typeof item.letterSpacing === 'number' ? String(item.letterSpacing) : undefined,
       opacity: item.opacity,
     } as any

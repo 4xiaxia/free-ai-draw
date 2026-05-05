@@ -1,0 +1,100 @@
+- generic [ref=e222]:
+  - button "返回首页" [ref=e223] [cursor=pointer]:
+    - generic [ref=e224]: ←
+    - generic [ref=e225]: 返回首页
+  - generic [ref=e227]:
+    - generic [ref=e228]:
+      - generic [ref=e229]:
+        - img [ref=e230]:
+          - generic [ref=e719]: 链接
+        - img
+      - dialog [ref=e721]:
+        - generic [ref=e722]:
+          - generic [ref=e723]:
+            - generic [ref=e724]:
+              - generic [ref=e725]: 素材库
+              - generic [ref=e726]: 双击素材可插入到画板；如果当前已选中节点，则会直接替换为该素材。
+            - button "上传素材" [active] [ref=e727] [cursor=pointer]
+          - generic [ref=e728]:
+            - generic [ref=e729]:
+              - generic [ref=e730]:
+                - generic [ref=e731]:
+                  - generic [ref=e732]: ⌕
+                  - textbox "⌕" [ref=e733]:
+                    - /placeholder: 搜索素材...
+                - combobox "筛选素材" [ref=e734]:
+                  - option "全部" [selected]
+                  - option "图片"
+                  - option "SVG"
+                  - option "收藏"
+                  - option "本地上传"
+                  - option "AI"
+                  - option "内置"
+                - combobox "排序" [ref=e735]:
+                  - option "最近使用" [selected]
+                  - option "名称"
+                  - option "大小"
+                  - option "类型"
+              - generic [ref=e736]:
+                - generic [ref=e737]: 共 0 个素材
+                - generic [ref=e738]: 拖拽文件到此处上传
+              - button "上传 SVG、PNG、JPG 或 WebP 素材，建立自己的常用库。 上传素材" [ref=e739] [cursor=pointer]:
+                - generic [ref=e740]: 上传 SVG、PNG、JPG 或 WebP 素材，建立自己的常用库。
+                - strong [ref=e741]: 上传素材
+            - complementary [ref=e742]:
+              - generic [ref=e743]: 选择一个素材查看详情
+          - generic [ref=e745]: 已用 0 B / 48.00 MB
+    - generic [ref=e232]:
+      - button "应用菜单" [ref=e233] [cursor=pointer]:
+        - img [ref=e235]
+      - button "撤销" [ref=e238] [cursor=pointer]:
+        - img [ref=e240]
+      - button "重做" [disabled] [ref=e244]:
+        - img [ref=e246]
+    - generic [ref=e251]:
+      - generic "手形工具 — H" [ref=e252] [cursor=pointer]:
+        - radio "手形工具 — H"
+        - img [ref=e254]
+      - generic "选择 — V" [ref=e257] [cursor=pointer]:
+        - radio "选择 — V" [checked]
+        - img [ref=e259]
+      - generic "思维导图 — M" [ref=e262] [cursor=pointer]:
+        - radio "思维导图 — M"
+        - img [ref=e264]
+      - generic "文本 — T" [ref=e267] [cursor=pointer]:
+        - radio "文本 — T"
+        - img [ref=e269]
+      - button "画笔 — P" [ref=e272] [cursor=pointer]:
+        - img [ref=e274]
+      - button "箭头 — A" [ref=e276] [cursor=pointer]:
+        - img [ref=e278]
+      - button "形状" [ref=e281] [cursor=pointer]:
+        - img [ref=e283]
+      - generic "图片 — Cmd+U" [ref=e286] [cursor=pointer]:
+        - radio "图片 — Cmd+U"
+        - img [ref=e288]
+      - generic [ref=e291]:
+        - button "素材库" [ref=e292] [cursor=pointer]:
+          - img [ref=e294]
+        - button "Autodraw" [ref=e301] [cursor=pointer]:
+          - img [ref=e303]
+          - generic [ref=e313]: Autodraw
+        - button "auto-mermaid" [ref=e314] [cursor=pointer]:
+          - img [ref=e316]
+          - generic [ref=e326]: auto-mermaid
+      - button "更多工具" [ref=e327] [cursor=pointer]:
+        - img [ref=e329]
+    - generic [ref=e336]:
+      - button "缩小 — Cmd+-" [ref=e337] [cursor=pointer]:
+        - img [ref=e339]
+      - generic "自适应" [ref=e342] [cursor=pointer]: 100%
+      - button "放大 — Cmd++" [ref=e343] [cursor=pointer]:
+        - img [ref=e345]
+    - combobox [ref=e349] [cursor=pointer]:
+      - option "默认" [selected]
+      - option "缤纷"
+      - option "柔和"
+      - option "复古"
+      - option "暗夜"
+      - option "星空"
+  - button "字体方案" [ref=e351] [cursor=pointer]

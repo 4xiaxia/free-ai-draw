@@ -273,15 +273,15 @@ const buildTextElement = (element: SceneTextElement) => {
       textStyle: {
         align,
         fontSize,
-        ['font-size']: String(fontSize),
+        'font-size': String(fontSize),
         color: element.style.fill,
         fontFamily: resolvedFontFamily,
-        ['font-family']: resolvedFontFamily,
+        'font-family': resolvedFontFamily,
         fontWeight: element.style.fontWeight,
         fontStyle: element.style.fontStyle,
         lineHeight:
           typeof element.style.lineHeight === 'number' ? element.style.lineHeight : undefined,
-        ['line-height']:
+        'line-height':
           typeof element.style.lineHeight === 'number'
             ? String(element.style.lineHeight)
             : undefined,
@@ -289,7 +289,7 @@ const buildTextElement = (element: SceneTextElement) => {
           typeof element.style.letterSpacing === 'number'
             ? element.style.letterSpacing
             : undefined,
-        ['letter-spacing']:
+        'letter-spacing':
           typeof element.style.letterSpacing === 'number'
             ? String(element.style.letterSpacing)
             : undefined,
@@ -301,16 +301,16 @@ const buildTextElement = (element: SceneTextElement) => {
       color: element.style.fill,
       bold: isBold || undefined,
       italic: isItalic || undefined,
-      ['font-size']: String(fontSize),
+      'font-size': String(fontSize),
       fontFamily: resolvedFontFamily,
-      ['font-family']: resolvedFontFamily,
+      'font-family': resolvedFontFamily,
       fontWeight: element.style.fontWeight,
       fontStyle: element.style.fontStyle,
-      ['line-height']:
+      'line-height':
         typeof element.style.lineHeight === 'number'
           ? String(element.style.lineHeight)
           : undefined,
-      ['letter-spacing']:
+      'letter-spacing':
         typeof element.style.letterSpacing === 'number'
           ? String(element.style.letterSpacing)
           : undefined,
