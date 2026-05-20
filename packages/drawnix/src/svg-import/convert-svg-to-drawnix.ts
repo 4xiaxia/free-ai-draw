@@ -249,7 +249,9 @@ const buildSkewYMatrix = (angleDeg = 0): SvgMatrix => ({
   f: 0,
 });
 
-const parseTransformAttribute = (value: string | null | undefined): SvgMatrix => {
+const parseTransformAttribute = (
+  value: string | null | undefined
+): SvgMatrix => {
   if (!value) {
     return IDENTITY_MATRIX;
   }
@@ -287,7 +289,11 @@ const parseTransformAttribute = (value: string | null | undefined): SvgMatrix =>
         next = buildScaleMatrix(numbers[0] ?? 1, numbers[1] ?? numbers[0] ?? 1);
         break;
       case 'rotate':
-        next = buildRotateMatrix(numbers[0] || 0, numbers[1] || 0, numbers[2] || 0);
+        next = buildRotateMatrix(
+          numbers[0] || 0,
+          numbers[1] || 0,
+          numbers[2] || 0
+        );
         break;
       case 'skewX':
         next = buildSkewXMatrix(numbers[0] || 0);
@@ -306,7 +312,10 @@ const parseTransformAttribute = (value: string | null | undefined): SvgMatrix =>
   return result;
 };
 
-const getAccumulatedTransform = (node: Element, root: SVGSVGElement): SvgMatrix => {
+const getAccumulatedTransform = (
+  node: Element,
+  root: SVGSVGElement
+): SvgMatrix => {
   const chain: Element[] = [];
   let current: Element | null = node;
   while (current) {
@@ -318,7 +327,10 @@ const getAccumulatedTransform = (node: Element, root: SVGSVGElement): SvgMatrix 
   }
 
   return chain.reduce((matrix, element) => {
-    return multiplyMatrices(matrix, parseTransformAttribute(element.getAttribute('transform')));
+    return multiplyMatrices(
+      matrix,
+      parseTransformAttribute(element.getAttribute('transform'))
+    );
   }, IDENTITY_MATRIX);
 };
 
@@ -330,7 +342,10 @@ const transformBounds = (
     applyMatrixToPoint([bounds.x, bounds.y], matrix),
     applyMatrixToPoint([bounds.x + bounds.width, bounds.y], matrix),
     applyMatrixToPoint([bounds.x, bounds.y + bounds.height], matrix),
-    applyMatrixToPoint([bounds.x + bounds.width, bounds.y + bounds.height], matrix),
+    applyMatrixToPoint(
+      [bounds.x + bounds.width, bounds.y + bounds.height],
+      matrix
+    ),
   ];
   const xs = corners.map((point) => point[0]);
   const ys = corners.map((point) => point[1]);
@@ -452,7 +467,9 @@ const roundMetric = (value: number) => Math.round(value * 100) / 100;
 
 const buildNodeOrderMap = (root: SVGSVGElement) => {
   return new Map(
-    Array.from(root.querySelectorAll('*')).map((node, index) => [node, index] as const)
+    Array.from(root.querySelectorAll('*')).map(
+      (node, index) => [node, index] as const
+    )
   );
 };
 
@@ -480,7 +497,10 @@ const GENERIC_FONT_FAMILY_TOKENS = new Set([
 
 const hasSpecificFontFamily = (fontFamilies: string[]) => {
   return fontFamilies.some((family) => {
-    const normalized = family.replace(/^['"]|['"]$/g, '').trim().toLowerCase();
+    const normalized = family
+      .replace(/^['"]|['"]$/g, '')
+      .trim()
+      .toLowerCase();
     return normalized.length > 0 && !GENERIC_FONT_FAMILY_TOKENS.has(normalized);
   });
 };
@@ -494,7 +514,11 @@ const resolveSvgImportFontFamily = (
   if (hasSpecificFontFamily(sourceFamilies)) {
     return normalizeFontFamilyStack(sourceFamilies.join(', '));
   }
-  return resolveFontFamilyForRole(role, explicitFontFamily, availableSourceFamilies);
+  return resolveFontFamilyForRole(
+    role,
+    explicitFontFamily,
+    availableSourceFamilies
+  );
 };
 
 const estimateDrawnixTextBounds = (
@@ -506,7 +530,10 @@ const estimateDrawnixTextBounds = (
   const safeText = text || ' ';
   const spacingWidth = Math.max(safeText.length - 1, 0) * letterSpacing;
   return {
-    width: Math.max(safeText.length * fontSize * 0.52 + spacingWidth, fontSize * 0.75),
+    width: Math.max(
+      safeText.length * fontSize * 0.52 + spacingWidth,
+      fontSize * 0.75
+    ),
     height: Math.max(lineHeight || fontSize * 1.2, 1),
   };
 };
@@ -549,12 +576,20 @@ const measureDrawnixTextBoundsByDom = (
   span.style.display = 'inline-block';
   span.style.fontSize = `${options.fontSize}px`;
   span.style.fontFamily = normalizeFontFamilyStack(options.fontFamily);
-  span.style.fontWeight = options.fontWeight ? String(options.fontWeight) : '400';
+  span.style.fontWeight = options.fontWeight
+    ? String(options.fontWeight)
+    : '400';
   span.style.fontStyle = options.fontStyle || 'normal';
-  if (typeof options.lineHeight === 'number' && Number.isFinite(options.lineHeight)) {
+  if (
+    typeof options.lineHeight === 'number' &&
+    Number.isFinite(options.lineHeight)
+  ) {
     span.style.lineHeight = `${options.lineHeight}px`;
   }
-  if (typeof options.letterSpacing === 'number' && Number.isFinite(options.letterSpacing)) {
+  if (
+    typeof options.letterSpacing === 'number' &&
+    Number.isFinite(options.letterSpacing)
+  ) {
     span.style.letterSpacing = `${options.letterSpacing}px`;
   }
   mount.appendChild(span);
@@ -660,12 +695,15 @@ const resolveInheritedTextStyle = (
   root: SVGSVGElement,
   classStyles: Record<string, CssStyleMap>
 ) => {
-  return getElementChain(element, root).reduce<CssStyleMap>((resolved, current) => {
-    return {
-      ...resolved,
-      ...resolveStyle(current, classStyles),
-    };
-  }, {});
+  return getElementChain(element, root).reduce<CssStyleMap>(
+    (resolved, current) => {
+      return {
+        ...resolved,
+        ...resolveStyle(current, classStyles),
+      };
+    },
+    {}
+  );
 };
 
 const resolveInheritedStyle = (
@@ -673,12 +711,15 @@ const resolveInheritedStyle = (
   root: SVGSVGElement,
   classStyles: Record<string, CssStyleMap>
 ) => {
-  return getElementChain(element, root).reduce<CssStyleMap>((resolved, current) => {
-    return {
-      ...resolved,
-      ...resolveStyle(current, classStyles),
-    };
-  }, {});
+  return getElementChain(element, root).reduce<CssStyleMap>(
+    (resolved, current) => {
+      return {
+        ...resolved,
+        ...resolveStyle(current, classStyles),
+      };
+    },
+    {}
+  );
 };
 
 const isApproximately = (left: number, right: number, tolerance = 0.01) =>
@@ -698,9 +739,15 @@ const normalizeRotation = (value: number) => {
 const resolveTextRotation = (matrix: SvgMatrix) => {
   const scaleX = Math.hypot(matrix.a, matrix.b);
   const scaleY = Math.hypot(matrix.c, matrix.d);
-  const orthogonal = isApproximately(matrix.a * matrix.c + matrix.b * matrix.d, 0, 0.02);
+  const orthogonal = isApproximately(
+    matrix.a * matrix.c + matrix.b * matrix.d,
+    0,
+    0.02
+  );
   const determinant = matrix.a * matrix.d - matrix.b * matrix.c;
-  const rotation = normalizeRotation((Math.atan2(matrix.b, matrix.a) * 180) / Math.PI);
+  const rotation = normalizeRotation(
+    (Math.atan2(matrix.b, matrix.a) * 180) / Math.PI
+  );
   const canUseNative =
     orthogonal &&
     isApproximately(scaleX, 1, 0.02) &&
@@ -753,7 +800,10 @@ const resolveTextRole = (
     typeof options.fontWeight === 'number'
       ? options.fontWeight
       : Number.parseFloat(String(options.fontWeight || ''));
-  if (options.fontSize >= 16 || (Number.isFinite(numericWeight) && numericWeight >= 600)) {
+  if (
+    options.fontSize >= 16 ||
+    (Number.isFinite(numericWeight) && numericWeight >= 600)
+  ) {
     return 'title';
   }
   return 'body';
@@ -774,7 +824,14 @@ const computeNativeTextFit = (
   rotation = 0
 ) => {
   const nativeRect = rotation
-    ? transformBounds(nativeBounds, buildRotateMatrix(rotation, nativeBounds.x + nativeBounds.width / 2, nativeBounds.y + nativeBounds.height / 2))
+    ? transformBounds(
+        nativeBounds,
+        buildRotateMatrix(
+          rotation,
+          nativeBounds.x + nativeBounds.width / 2,
+          nativeBounds.y + nativeBounds.height / 2
+        )
+      )
     : nativeBounds;
   const actualBounds = {
     width: nativeRect.width,
@@ -811,10 +868,24 @@ const fitsNativeTextThreshold = (
   );
 };
 
+const fitsNativeTextMetricsThreshold = (
+  nativeMetrics: { width: number; height: number },
+  sourceMetrics: { width: number; height: number }
+) => {
+  const widthError = Math.abs(nativeMetrics.width - sourceMetrics.width);
+  const heightError = Math.abs(nativeMetrics.height - sourceMetrics.height);
+  return (
+    widthError <= Math.max(6, sourceMetrics.width * 0.12) &&
+    heightError <= Math.max(4, sourceMetrics.height * 0.18)
+  );
+};
+
 const getRootViewport = (root: SVGSVGElement) => {
   const viewBox = root.getAttribute('viewBox');
   if (viewBox) {
-    const parts = viewBox.split(/[\s,]+/).map((item) => Number.parseFloat(item));
+    const parts = viewBox
+      .split(/[\s,]+/)
+      .map((item) => Number.parseFloat(item));
     if (parts.length === 4 && parts.every((item) => Number.isFinite(item))) {
       const [, , width, height] = parts;
       return { width, height };
@@ -832,11 +903,13 @@ const isWhiteLike = (value: string | undefined) => {
     return false;
   }
   const normalized = value.trim().toLowerCase();
-  return normalized === '#fff'
-    || normalized === '#ffffff'
-    || normalized === 'white'
-    || normalized === 'rgb(255,255,255)'
-    || normalized === 'rgb(255, 255, 255)';
+  return (
+    normalized === '#fff' ||
+    normalized === '#ffffff' ||
+    normalized === 'white' ||
+    normalized === 'rgb(255,255,255)' ||
+    normalized === 'rgb(255, 255, 255)'
+  );
 };
 
 const isBackgroundRect = (
@@ -854,22 +927,29 @@ const isBackgroundRect = (
   const x = parseNumber(element.getAttribute('x'));
   const y = parseNumber(element.getAttribute('y'));
   const width = widthAttr.includes('%') ? rootWidth : parseNumber(widthAttr);
-  const height = heightAttr.includes('%') ? rootHeight : parseNumber(heightAttr);
-  const fill = normalizeColor(resolvedStyle['fill'] || element.getAttribute('fill'));
+  const height = heightAttr.includes('%')
+    ? rootHeight
+    : parseNumber(heightAttr);
+  const fill = normalizeColor(
+    resolvedStyle['fill'] || element.getAttribute('fill')
+  );
 
-  return width >= rootWidth * 0.95
-    && height >= rootHeight * 0.95
-    && Math.abs(x) < 20
-    && Math.abs(y) < 20
-    && isWhiteLike(fill);
+  return (
+    width >= rootWidth * 0.95 &&
+    height >= rootHeight * 0.95 &&
+    Math.abs(x) < 20 &&
+    Math.abs(y) < 20 &&
+    isWhiteLike(fill)
+  );
 };
 
-const tokenizePath = (d: string) => d.match(/[MLHVQZmlhvqz]|-?\d*\.?\d+/g) || [];
+const tokenizePath = (d: string) =>
+  d.match(/[MLHVQZmlhvqz]|-?\d*\.?\d+/g) || [];
 
 const isSimplePath = (d: string) => /^[\s,0-9.\-MLHVQmlhvqzZ]+$/.test(d.trim());
 
-const hasDiagonalArrowHead = (d: string) => /l-?\d+\.?\d*,-?\d+\.?\d*/i.test(d)
-  || /m-?\d+\.?\d*,-?\d+\.?\d*/i.test(d);
+const hasDiagonalArrowHead = (d: string) =>
+  /l-?\d+\.?\d*,-?\d+\.?\d*/i.test(d) || /m-?\d+\.?\d*,-?\d+\.?\d*/i.test(d);
 
 const buildSvgImportMetadata = (
   item: SvgImportTextItem,
@@ -886,7 +966,9 @@ const buildSvgImportMetadata = (
   isPlaceholder: false,
 });
 
-const buildSvgTextFragmentMetadata = (item: SvgImportTextItem): SvgTextFragmentMetadata => ({
+const buildSvgTextFragmentMetadata = (
+  item: SvgImportTextItem
+): SvgTextFragmentMetadata => ({
   kind: 'text-fragment',
   source: 'svg-import',
   sourceElementId: item.id,
@@ -931,7 +1013,10 @@ const buildTextElement = (item: SvgImportTextItem): SvgImportedElement => {
       url: buildSvgTextFragmentDataUrl(fragmentMetadata),
       points: [
         [item.sourceLeft, item.sourceTop],
-        [item.sourceLeft + item.sourceWidth, item.sourceTop + item.sourceHeight],
+        [
+          item.sourceLeft + item.sourceWidth,
+          item.sourceTop + item.sourceHeight,
+        ],
       ],
       sceneImportMetadata: fragmentMetadata,
       svgImportMetadata: buildSvgImportMetadata(item, 'fragment'),
@@ -939,9 +1024,18 @@ const buildTextElement = (item: SvgImportTextItem): SvgImportedElement => {
   }
 
   const fontFamily =
-    item.resolvedFontFamily || resolveSvgImportFontFamily(item.textRole, item.fontFamily, item.fontFamilies);
+    item.resolvedFontFamily ||
+    resolveSvgImportFontFamily(
+      item.textRole,
+      item.fontFamily,
+      item.fontFamilies
+    );
   const align =
-    item.textAnchor === 'middle' ? 'center' : item.textAnchor === 'end' ? 'right' : 'left';
+    item.textAnchor === 'middle'
+      ? 'center'
+      : item.textAnchor === 'end'
+      ? 'right'
+      : 'left';
   const lineHeight =
     typeof item.lineHeight === 'number' && Number.isFinite(item.lineHeight)
       ? item.lineHeight
@@ -952,8 +1046,8 @@ const buildTextElement = (item: SvgImportTextItem): SvgImportedElement => {
       ? item.fontWeight
       : Number.parseFloat(String(item.fontWeight || ''));
   const isBold =
-    String(item.fontWeight || '').toLowerCase() === 'bold'
-    || (Number.isFinite(numericWeight) && numericWeight >= 600);
+    String(item.fontWeight || '').toLowerCase() === 'bold' ||
+    (Number.isFinite(numericWeight) && numericWeight >= 600);
 
   const element = createGeometryElementWithText(
     BasicShapes.text,
@@ -980,7 +1074,9 @@ const buildTextElement = (item: SvgImportTextItem): SvgImportedElement => {
           typeof lineHeight === 'number' ? String(lineHeight) : undefined,
         letterSpacing: item.letterSpacing,
         'letter-spacing':
-          typeof item.letterSpacing === 'number' ? String(item.letterSpacing) : undefined,
+          typeof item.letterSpacing === 'number'
+            ? String(item.letterSpacing)
+            : undefined,
         opacity: item.opacity,
       },
     } as any,
@@ -997,7 +1093,9 @@ const buildTextElement = (item: SvgImportTextItem): SvgImportedElement => {
       'line-height':
         typeof lineHeight === 'number' ? String(lineHeight) : undefined,
       'letter-spacing':
-        typeof item.letterSpacing === 'number' ? String(item.letterSpacing) : undefined,
+        typeof item.letterSpacing === 'number'
+          ? String(item.letterSpacing)
+          : undefined,
       opacity: item.opacity,
     } as any
   ) as SvgImportedElement;
@@ -1048,20 +1146,25 @@ const buildEllipseElement = (item: SvgImportEllipseItem) => {
 };
 
 const buildVectorLineElement = (item: SvgImportVectorLineItem) => {
-  const element = createVectorLineElement(VectorLineShape.straight, item.points, {
-    fill: item.fill,
-    strokeColor: item.strokeColor || DEFAULT_STROKE,
-    strokeWidth: item.strokeWidth ?? DEFAULT_STROKE_WIDTH,
-  }) as PlaitElement & { id: string };
+  const element = createVectorLineElement(
+    VectorLineShape.straight,
+    item.points,
+    {
+      fill: item.fill,
+      strokeColor: item.strokeColor || DEFAULT_STROKE,
+      strokeWidth: item.strokeWidth ?? DEFAULT_STROKE_WIDTH,
+    }
+  ) as PlaitElement & { id: string };
 
   element.id = item.id;
   return element;
 };
 
 const buildRectElement = (item: SvgImportRectItem) => {
-  const shape = (item.rx || 0) > 0 || (item.ry || 0) > 0 
-    ? BasicShapes.roundRectangle 
-    : BasicShapes.rectangle;
+  const shape =
+    (item.rx || 0) > 0 || (item.ry || 0) > 0
+      ? BasicShapes.roundRectangle
+      : BasicShapes.rectangle;
 
   const element = createGeometryElementWithText(
     shape,
@@ -1122,7 +1225,10 @@ const serializeSvgNodes = (
 
   for (const node of nodes) {
     const clonedNode = node.cloneNode(true) as Element;
-    clonedNode.setAttribute('transform', matrixToTransform(getAccumulatedTransform(node, root)));
+    clonedNode.setAttribute(
+      'transform',
+      matrixToTransform(getAccumulatedTransform(node, root))
+    );
     nextRoot.appendChild(clonedNode);
   }
 
@@ -1169,7 +1275,11 @@ const estimateSvgTextBounds = (
   if (!options.rotation) {
     return bounds;
   }
-  const rotationMatrix = buildRotateMatrix(options.rotation, anchorPoint[0], anchorPoint[1]);
+  const rotationMatrix = buildRotateMatrix(
+    options.rotation,
+    anchorPoint[0],
+    anchorPoint[1]
+  );
   return transformBounds(bounds, rotationMatrix);
 };
 
@@ -1183,7 +1293,9 @@ const shouldSkipPlaceholderText = (
   }
   return Boolean(
     assetPackage.iconBoxMap[normalizedLabel] &&
-      assetPackage.componentAssets[assetPackage.iconBoxMap[normalizedLabel]!.iconId]
+      assetPackage.componentAssets[
+        assetPackage.iconBoxMap[normalizedLabel]!.iconId
+      ]
   );
 };
 
@@ -1195,7 +1307,9 @@ const collectTextNodes = (
 ) => {
   const texts: SvgImportTextItem[] = [];
 
-  for (const node of Array.from(root.querySelectorAll('text')) as SVGTextElement[]) {
+  for (const node of Array.from(
+    root.querySelectorAll('text')
+  ) as SVGTextElement[]) {
     if (isDefinitionNode(node)) {
       continue;
     }
@@ -1215,7 +1329,10 @@ const collectTextNodes = (
 
     const fontSize = parseNumber(style['font-size'], DEFAULT_FONT_SIZE);
     const anchorPoint = applyMatrixToPoint(
-      [parseNumber(node.getAttribute('x')), parseNumber(node.getAttribute('y'))],
+      [
+        parseNumber(node.getAttribute('x')),
+        parseNumber(node.getAttribute('y')),
+      ],
       transform
     );
     const rawBBox = measureRawBBoxByDom(root, node);
@@ -1232,13 +1349,15 @@ const collectTextNodes = (
           style['text-anchor'] === 'middle'
             ? 'middle'
             : style['text-anchor'] === 'end'
-              ? 'end'
-              : 'start',
+            ? 'end'
+            : 'start',
         dominantBaseline: style['dominant-baseline'] || undefined,
         rotation: rotationInfo.rotation,
       });
     const sourceWidth = roundMetric(Math.max(1, sourceBBox?.width || fontSize));
-    const sourceHeight = roundMetric(Math.max(1, sourceBBox?.height || fontSize));
+    const sourceHeight = roundMetric(
+      Math.max(1, sourceBBox?.height || fontSize)
+    );
     const transformedCenter = rawBBox
       ? applyMatrixToPoint(
           [rawBBox.x + rawBBox.width / 2, rawBBox.y + rawBBox.height / 2],
@@ -1277,8 +1396,8 @@ const collectTextNodes = (
       style['text-anchor'] === 'middle'
         ? 'middle'
         : style['text-anchor'] === 'end'
-          ? 'end'
-          : 'start';
+        ? 'end'
+        : 'start';
     const dominantBaseline = style['dominant-baseline'] || undefined;
     const measuredNativePreview = measureDrawnixTextBoundsByDom(text, {
       fontSize,
@@ -1286,7 +1405,9 @@ const collectTextNodes = (
       fontWeight: style['font-weight'],
       fontStyle: style['font-style'],
       letterSpacing: parseNumber(style['letter-spacing'], 0),
-      lineHeight: roundMetric(Math.max(rawBBox?.height || sourceHeight, fontSize)),
+      lineHeight: roundMetric(
+        Math.max(rawBBox?.height || sourceHeight, fontSize)
+      ),
     });
     const nativePreview =
       measuredNativePreview ||
@@ -1301,28 +1422,31 @@ const collectTextNodes = (
       textLength: text.length,
     });
     const baseDrawBounds = drawBounds;
-    const expandedDrawBounds =
-      measuredNativePreview
-        ? rawBBox && rotationInfo.canUseNative && rotationInfo.rotation !== 0
-          ? {
-              x:
-                transformedCenter[0]
-                - Math.max(baseDrawBounds.width, paddedNativePreview.width) / 2,
-              y:
-                transformedCenter[1]
-                - Math.max(baseDrawBounds.height, paddedNativePreview.height) / 2,
-              width: Math.max(baseDrawBounds.width, paddedNativePreview.width),
-              height: Math.max(baseDrawBounds.height, paddedNativePreview.height),
-            }
-          : expandBoundsToContain(
-              baseDrawBounds,
-              computeTextBoundsFromMeasuredSize(anchorPoint, paddedNativePreview, {
+    const expandedDrawBounds = measuredNativePreview
+      ? rawBBox && rotationInfo.canUseNative && rotationInfo.rotation !== 0
+        ? {
+            x:
+              transformedCenter[0] -
+              Math.max(baseDrawBounds.width, paddedNativePreview.width) / 2,
+            y:
+              transformedCenter[1] -
+              Math.max(baseDrawBounds.height, paddedNativePreview.height) / 2,
+            width: Math.max(baseDrawBounds.width, paddedNativePreview.width),
+            height: Math.max(baseDrawBounds.height, paddedNativePreview.height),
+          }
+        : expandBoundsToContain(
+            baseDrawBounds,
+            computeTextBoundsFromMeasuredSize(
+              anchorPoint,
+              paddedNativePreview,
+              {
                 fontSize,
                 textAnchor,
                 dominantBaseline,
-              })
+              }
             )
-        : baseDrawBounds;
+          )
+      : baseDrawBounds;
     const fitsNativeSourceBounds = fitsNativeTextThreshold(
       baseDrawBounds,
       {
@@ -1387,18 +1511,38 @@ const collectTextNodes = (
       node,
     };
 
-    const hasVisibleComplexStroke = isVisibleStroke(item.stroke, item.strokeWidth);
-    const lacksStableMetrics = !nativePreview || nativePreview.width <= 0 || nativePreview.height <= 0;
+    const hasVisibleComplexStroke = isVisibleStroke(
+      item.stroke,
+      item.strokeWidth
+    );
+    const lacksStableMetrics =
+      !nativePreview || nativePreview.width <= 0 || nativePreview.height <= 0;
     const hasLengthConstraint =
       typeof item.textLength === 'number' && item.textLength > 0
         ? true
         : Boolean(item.lengthAdjust?.trim());
+    const sourceFontStack = item.fontFamilies.length
+      ? normalizeFontFamilyStack(item.fontFamilies.join(', '))
+      : '';
+    const resolvedFontStack = normalizeFontFamilyStack(item.resolvedFontFamily);
+    const hasGenericSourceFontRemap =
+      item.fontFamilies.length > 0 &&
+      !hasSpecificFontFamily(item.fontFamilies) &&
+      sourceFontStack !== resolvedFontStack;
+    const fitsNativeSourceMetrics =
+      !hasGenericSourceFontRemap ||
+      !measuredNativePreview ||
+      fitsNativeTextMetricsThreshold(measuredNativePreview, {
+        width: sourceWidth,
+        height: sourceHeight,
+      });
     const shouldFallback =
       item.hasTspan ||
       hasVisibleComplexStroke ||
       item.hasComplexTransform ||
       hasLengthConstraint ||
       lacksStableMetrics ||
+      !fitsNativeSourceMetrics ||
       !fitsNativeSourceBounds;
 
     if (shouldFallback) {
@@ -1453,12 +1597,18 @@ const extractMainArrowPointsFromPath = (
     switch (command) {
       case 'M':
       case 'L':
-        pushPoint(Number.parseFloat(token), Number.parseFloat(tokens[index + 1] || '0'));
+        pushPoint(
+          Number.parseFloat(token),
+          Number.parseFloat(tokens[index + 1] || '0')
+        );
         index += 2;
         break;
       case 'm':
       case 'l':
-        pushPoint(x + Number.parseFloat(token), y + Number.parseFloat(tokens[index + 1] || '0'));
+        pushPoint(
+          x + Number.parseFloat(token),
+          y + Number.parseFloat(tokens[index + 1] || '0')
+        );
         index += 2;
         break;
       case 'H':
@@ -1478,11 +1628,17 @@ const extractMainArrowPointsFromPath = (
         index += 1;
         break;
       case 'Q':
-        pushPoint(Number.parseFloat(tokens[index + 2] || '0'), Number.parseFloat(tokens[index + 3] || '0'));
+        pushPoint(
+          Number.parseFloat(tokens[index + 2] || '0'),
+          Number.parseFloat(tokens[index + 3] || '0')
+        );
         index += 4;
         break;
       case 'q':
-        pushPoint(x + Number.parseFloat(tokens[index + 2] || '0'), y + Number.parseFloat(tokens[index + 3] || '0'));
+        pushPoint(
+          x + Number.parseFloat(tokens[index + 2] || '0'),
+          y + Number.parseFloat(tokens[index + 3] || '0')
+        );
         index += 4;
         break;
       default:
@@ -1535,7 +1691,8 @@ const measureRawBBoxByDom = (root: SVGSVGElement, node: Element) => {
   }
 
   const mount = document.createElement('div');
-  mount.style.cssText = 'position:absolute;left:-99999px;top:-99999px;width:0;height:0;overflow:hidden;';
+  mount.style.cssText =
+    'position:absolute;left:-99999px;top:-99999px;width:0;height:0;overflow:hidden;';
   const svg = document.createElementNS(SVG_NS, 'svg');
   svg.setAttribute('xmlns', SVG_NS);
   const { width, height } = getRootViewport(root);
@@ -1600,7 +1757,9 @@ const ensureNodeId = (node: Element, prefix: string, index: number) => {
 };
 
 const isDefinitionNode = (node: Element) => {
-  return Boolean(node.closest('defs, style, clipPath, mask, pattern, symbol, marker'));
+  return Boolean(
+    node.closest('defs, style, clipPath, mask, pattern, symbol, marker')
+  );
 };
 
 const parsePointList = (value: string) => {
@@ -1617,7 +1776,9 @@ const parsePointList = (value: string) => {
 };
 
 const hasArrowMarker = (node: Element) => {
-  return Boolean(node.getAttribute('marker-start') || node.getAttribute('marker-end'));
+  return Boolean(
+    node.getAttribute('marker-start') || node.getAttribute('marker-end')
+  );
 };
 
 const resolveArrowMarkers = (node: Element) => {
@@ -1788,7 +1949,11 @@ const collectPackageBoundImages = (
     const width = parseNumber(node.getAttribute('width'));
     const height = parseNumber(node.getAttribute('height'));
     const asset = componentAssets[id];
-    const url = asset?.url || node.getAttribute('href') || node.getAttribute('xlink:href') || '';
+    const url =
+      asset?.url ||
+      node.getAttribute('href') ||
+      node.getAttribute('xlink:href') ||
+      '';
 
     if (!url || width <= 0 || height <= 0) {
       continue;
@@ -1885,7 +2050,11 @@ const collectArrowGroupVectorLines = (
     if (isDefinitionNode(group)) {
       continue;
     }
-    const groupId = ensureNodeId(group, 'svg-arrow-group', vectorLines.length + 1);
+    const groupId = ensureNodeId(
+      group,
+      'svg-arrow-group',
+      vectorLines.length + 1
+    );
     const paths = Array.from(group.children).filter(
       (child): child is SVGPathElement => child.tagName.toLowerCase() === 'path'
     );
@@ -1916,8 +2085,14 @@ const collectArrowGroupVectorLines = (
           sourceSubOrder: index,
           points: transformedPoints,
           fill: subpath.closed ? normalizeColor(style.fill) : undefined,
-          strokeColor: normalizeColor(style.stroke) || normalizeColor(style.fill) || DEFAULT_STROKE,
-          strokeWidth: parseNumber(style['stroke-width'], subpath.closed ? 1 : DEFAULT_STROKE_WIDTH),
+          strokeColor:
+            normalizeColor(style.stroke) ||
+            normalizeColor(style.fill) ||
+            DEFAULT_STROKE,
+          strokeWidth: parseNumber(
+            style['stroke-width'],
+            subpath.closed ? 1 : DEFAULT_STROKE_WIDTH
+          ),
         });
       });
 
@@ -1940,7 +2115,9 @@ const collectVectorLineItems = (
 ) => {
   const vectorLines: SvgImportVectorLineItem[] = [];
 
-  for (const node of Array.from(root.querySelectorAll('line, polyline, polygon, path'))) {
+  for (const node of Array.from(
+    root.querySelectorAll('line, polyline, polygon, path')
+  )) {
     if (isDefinitionNode(node)) {
       continue;
     }
@@ -1949,7 +2126,8 @@ const collectVectorLineItems = (
     }
 
     const tagName = node.tagName.toLowerCase();
-    const hasMarker = !!node.getAttribute('marker-end') || !!node.getAttribute('marker-start');
+    const hasMarker =
+      !!node.getAttribute('marker-end') || !!node.getAttribute('marker-start');
     const className = node.getAttribute('class') || '';
     if (hasMarker || className.includes('arrow')) {
       continue;
@@ -1964,8 +2142,14 @@ const collectVectorLineItems = (
       subpaths = [
         {
           points: [
-            [parseNumber(node.getAttribute('x1')), parseNumber(node.getAttribute('y1'))],
-            [parseNumber(node.getAttribute('x2')), parseNumber(node.getAttribute('y2'))],
+            [
+              parseNumber(node.getAttribute('x1')),
+              parseNumber(node.getAttribute('y1')),
+            ],
+            [
+              parseNumber(node.getAttribute('x2')),
+              parseNumber(node.getAttribute('y2')),
+            ],
           ],
           closed: false,
         },
@@ -1975,14 +2159,18 @@ const collectVectorLineItems = (
       if (tagName === 'polygon' && points.length >= 2) {
         points.push(points[0]!);
       }
-      subpaths = points.length >= 2 ? [{ points, closed: tagName === 'polygon' }] : [];
+      subpaths =
+        points.length >= 2 ? [{ points, closed: tagName === 'polygon' }] : [];
     } else if (tagName === 'path') {
       const d = node.getAttribute('d') || '';
       if (!d || !isSimplePath(d)) {
         continue;
       }
       const classification = classifyPathNode(node, style);
-      if (classification === 'convert-arrow' || classification === 'preserve-arrow') {
+      if (
+        classification === 'convert-arrow' ||
+        classification === 'preserve-arrow'
+      ) {
         continue;
       }
       subpaths = extractPathSubpaths(d);
@@ -2001,12 +2189,14 @@ const collectVectorLineItems = (
           points: transformedPoints,
           fill: subpath.closed ? normalizeColor(style.fill) : undefined,
           strokeColor:
-            normalizeColor(style.stroke)
-            || (subpath.closed ? normalizeColor(style.fill) : undefined)
-            || DEFAULT_STROKE,
+            normalizeColor(style.stroke) ||
+            (subpath.closed ? normalizeColor(style.fill) : undefined) ||
+            DEFAULT_STROKE,
           strokeWidth: parseNumber(
             style['stroke-width'],
-            subpath.closed && !normalizeColor(style.stroke) ? 0 : DEFAULT_STROKE_WIDTH
+            subpath.closed && !normalizeColor(style.stroke)
+              ? 0
+              : DEFAULT_STROKE_WIDTH
           ),
         } satisfies SvgImportVectorLineItem;
       })
@@ -2030,14 +2220,20 @@ const collectArrowItems = (
   const converted: SvgImportArrowItem[] = [];
   const preserved: SvgImportImageItem[] = [];
 
-  for (const node of Array.from(root.querySelectorAll('line, polyline, path'))) {
+  for (const node of Array.from(
+    root.querySelectorAll('line, polyline, path')
+  )) {
     if (isDefinitionNode(node)) {
       continue;
     }
     if (node.closest('g.arrow')) {
       continue;
     }
-    const id = ensureNodeId(node, 'svg-arrow', converted.length + preserved.length + 1);
+    const id = ensureNodeId(
+      node,
+      'svg-arrow',
+      converted.length + preserved.length + 1
+    );
     const tagName = node.tagName.toLowerCase();
     const style = resolveInheritedStyle(node, root, classStyles);
     const transform = getAccumulatedTransform(node, root);
@@ -2049,16 +2245,17 @@ const collectArrowItems = (
       if (hasArrowMarker(node) && d && isSimplePath(d)) {
         const points = extractMainArrowPointsFromPath(d, {
           trimShortDiagonalTail: false,
-        }).map((point) =>
-          applyMatrixToPoint(point, transform)
-        );
+        }).map((point) => applyMatrixToPoint(point, transform));
         if (points.length >= 2) {
           converted.push({
             id,
             sourceOrder,
             points,
             strokeColor: normalizeColor(style.stroke) || DEFAULT_STROKE,
-            strokeWidth: parseNumber(style['stroke-width'], DEFAULT_STROKE_WIDTH),
+            strokeWidth: parseNumber(
+              style['stroke-width'],
+              DEFAULT_STROKE_WIDTH
+            ),
             sourceMarker: markerConfig.sourceMarker,
             targetMarker: markerConfig.targetMarker,
           });
@@ -2078,7 +2275,10 @@ const collectArrowItems = (
             sourceOrder,
             points,
             strokeColor: normalizeColor(style.stroke) || DEFAULT_STROKE,
-            strokeWidth: parseNumber(style['stroke-width'], DEFAULT_STROKE_WIDTH),
+            strokeWidth: parseNumber(
+              style['stroke-width'],
+              DEFAULT_STROKE_WIDTH
+            ),
             sourceMarker: ArrowLineMarkerType.none,
             targetMarker: ArrowLineMarkerType.arrow,
           });
@@ -2087,7 +2287,10 @@ const collectArrowItems = (
       } else if (classification === 'preserve-arrow') {
         const bbox = measureBBoxByDom(root, node);
         if (bbox && bbox.width > 0 && bbox.height > 0) {
-          const strokeWidth = parseNumber(style['stroke-width'], DEFAULT_STROKE_WIDTH);
+          const strokeWidth = parseNumber(
+            style['stroke-width'],
+            DEFAULT_STROKE_WIDTH
+          );
           const paddedBBox = expandBBox(bbox, Math.max(4, strokeWidth));
           preserved.push({
             id,
@@ -2101,7 +2304,10 @@ const collectArrowItems = (
             ),
             points: [
               [paddedBBox.x, paddedBBox.y],
-              [paddedBBox.x + paddedBBox.width, paddedBBox.y + paddedBBox.height],
+              [
+                paddedBBox.x + paddedBBox.width,
+                paddedBBox.y + paddedBBox.height,
+              ],
             ],
           });
           consumedIds.add(id);
@@ -2110,7 +2316,8 @@ const collectArrowItems = (
       continue;
     }
 
-    const hasMarker = !!node.getAttribute('marker-end') || !!node.getAttribute('marker-start');
+    const hasMarker =
+      !!node.getAttribute('marker-end') || !!node.getAttribute('marker-start');
     const className = node.getAttribute('class') || '';
     if (!hasMarker && !className.includes('arrow')) {
       continue;
@@ -2120,11 +2327,17 @@ const collectArrowItems = (
     if (tagName === 'line') {
       points.push(
         applyMatrixToPoint(
-          [parseNumber(node.getAttribute('x1')), parseNumber(node.getAttribute('y1'))],
+          [
+            parseNumber(node.getAttribute('x1')),
+            parseNumber(node.getAttribute('y1')),
+          ],
           transform
         ),
         applyMatrixToPoint(
-          [parseNumber(node.getAttribute('x2')), parseNumber(node.getAttribute('y2'))],
+          [
+            parseNumber(node.getAttribute('x2')),
+            parseNumber(node.getAttribute('y2')),
+          ],
           transform
         )
       );
@@ -2135,7 +2348,9 @@ const collectArrowItems = (
         .map((item) => Number.parseFloat(item))
         .filter((item) => Number.isFinite(item));
       for (let index = 0; index < values.length - 1; index += 2) {
-        points.push(applyMatrixToPoint([values[index]!, values[index + 1]!], transform));
+        points.push(
+          applyMatrixToPoint([values[index]!, values[index + 1]!], transform)
+        );
       }
     }
 
@@ -2178,7 +2393,16 @@ const countIgnoredBackgroundRects = (
 };
 
 const isRenderableResidualTag = (tagName: string) => {
-  return ['path', 'line', 'polyline', 'polygon', 'circle', 'ellipse', 'image', 'use'].includes(tagName);
+  return [
+    'path',
+    'line',
+    'polyline',
+    'polygon',
+    'circle',
+    'ellipse',
+    'image',
+    'use',
+  ].includes(tagName);
 };
 
 const hasConsumedAncestor = (node: Element, consumedIds: Set<string>) => {
@@ -2233,7 +2457,13 @@ const collectResidualFragments = (
     fragments.push({
       id,
       sourceOrder: getNodeOrder(node, nodeOrderMap),
-      url: serializeSvgNodes(root, [node], paddedBBox.width, paddedBBox.height, paddedBBox),
+      url: serializeSvgNodes(
+        root,
+        [node],
+        paddedBBox.width,
+        paddedBBox.height,
+        paddedBBox
+      ),
       points: [
         [paddedBBox.x, paddedBBox.y],
         [paddedBBox.x + paddedBBox.width, paddedBBox.y + paddedBBox.height],
@@ -2304,7 +2534,11 @@ export const convertSvgAssetPackageToDrawnix = (
   const doc = parser.parseFromString(assetPackage.svgText, 'image/svg+xml');
   const root = doc.documentElement as unknown as SVGSVGElement;
 
-  if (!root || root.tagName.toLowerCase() !== 'svg' || root.querySelector('parsererror')) {
+  if (
+    !root ||
+    root.tagName.toLowerCase() !== 'svg' ||
+    root.querySelector('parsererror')
+  ) {
     throw new Error('Invalid SVG content');
   }
 
@@ -2312,23 +2546,50 @@ export const convertSvgAssetPackageToDrawnix = (
   const { width, height } = getRootViewport(root);
   const nodeOrderMap = buildNodeOrderMap(root);
   const consumedIds = new Set<string>();
-  
+
   const texts = collectTextNodes(root, classStyles, assetPackage, nodeOrderMap);
   for (const text of texts) {
     consumedIds.add(text.id);
   }
 
-  const rects = collectRectNodes(root, classStyles, consumedIds, width, height, nodeOrderMap);
-  const ellipses = collectEllipseNodes(root, classStyles, consumedIds, nodeOrderMap);
+  const rects = collectRectNodes(
+    root,
+    classStyles,
+    consumedIds,
+    width,
+    height,
+    nodeOrderMap
+  );
+  const ellipses = collectEllipseNodes(
+    root,
+    classStyles,
+    consumedIds,
+    nodeOrderMap
+  );
   const externalComponents = collectPackageBoundImages(
     root,
     assetPackage.componentAssets,
     consumedIds,
     nodeOrderMap
   );
-  const arrowGroups = collectArrowGroupVectorLines(root, classStyles, consumedIds, nodeOrderMap);
-  const vectorLines = collectVectorLineItems(root, classStyles, consumedIds, nodeOrderMap);
-  const arrowItems = collectArrowItems(root, classStyles, consumedIds, nodeOrderMap);
+  const arrowGroups = collectArrowGroupVectorLines(
+    root,
+    classStyles,
+    consumedIds,
+    nodeOrderMap
+  );
+  const vectorLines = collectVectorLineItems(
+    root,
+    classStyles,
+    consumedIds,
+    nodeOrderMap
+  );
+  const arrowItems = collectArrowItems(
+    root,
+    classStyles,
+    consumedIds,
+    nodeOrderMap
+  );
   const residualFragments = collectResidualFragments(
     root,
     width,
@@ -2337,38 +2598,68 @@ export const convertSvgAssetPackageToDrawnix = (
     consumedIds,
     nodeOrderMap
   );
-  const ignoredBackgroundCount = countIgnoredBackgroundRects(root, width, height, classStyles);
+  const ignoredBackgroundCount = countIgnoredBackgroundRects(
+    root,
+    width,
+    height,
+    classStyles
+  );
   const warnings: string[] = [];
 
   if (arrowItems.preserved.length) {
     warnings.push('部分箭头保留为原 SVG 图片形态导入。');
   }
   if (residualFragments.length) {
-    warnings.push(`有 ${residualFragments.length} 个复杂图形仍保留为 SVG 片段。`);
+    warnings.push(
+      `有 ${residualFragments.length} 个复杂图形仍保留为 SVG 片段。`
+    );
   }
-  const fragmentTextCount = texts.filter((item) => item.importMode === 'fragment').length;
+  const fragmentTextCount = texts.filter(
+    (item) => item.importMode === 'fragment'
+  ).length;
   if (fragmentTextCount > 0) {
     warnings.push(`有 ${fragmentTextCount} 段复杂文字保留为 SVG 片段。`);
   }
-  if (Object.keys(assetPackage.componentAssets).length && !externalComponents.length) {
+  if (
+    Object.keys(assetPackage.componentAssets).length &&
+    !externalComponents.length
+  ) {
     warnings.push('未在总 SVG 中匹配到组件占位节点，请检查文件命名规则。');
   }
 
   const elements: PlaitElement[] = [
     ...rects.map((item) => ({ item, element: buildRectElement(item) })),
     ...ellipses.map((item) => ({ item, element: buildEllipseElement(item) })),
-    ...arrowGroups.map((item) => ({ item, element: buildVectorLineElement(item) })),
-    ...vectorLines.map((item) => ({ item, element: buildVectorLineElement(item) })),
-    ...arrowItems.converted.map((item) => ({ item, element: buildArrowElement(item) })),
-    ...residualFragments.map((item) => ({ item, element: buildImageElement(item) })),
-    ...externalComponents.map((item) => ({ item, element: buildImageElement(item) })),
-    ...arrowItems.preserved.map((item) => ({ item, element: buildImageElement(item) })),
+    ...arrowGroups.map((item) => ({
+      item,
+      element: buildVectorLineElement(item),
+    })),
+    ...vectorLines.map((item) => ({
+      item,
+      element: buildVectorLineElement(item),
+    })),
+    ...arrowItems.converted.map((item) => ({
+      item,
+      element: buildArrowElement(item),
+    })),
+    ...residualFragments.map((item) => ({
+      item,
+      element: buildImageElement(item),
+    })),
+    ...externalComponents.map((item) => ({
+      item,
+      element: buildImageElement(item),
+    })),
+    ...arrowItems.preserved.map((item) => ({
+      item,
+      element: buildImageElement(item),
+    })),
     ...texts.map((item) => ({ item, element: buildTextElement(item) })),
   ]
     .sort((left, right) => {
       return (
-        left.item.sourceOrder - right.item.sourceOrder
-        || (left.item.sourceSubOrder || 0) - (right.item.sourceSubOrder || 0)
+        left.item.sourceOrder - right.item.sourceOrder ||
+        (left.item.sourceSubOrder || 0) - (right.item.sourceSubOrder || 0)
       );
     })
     .map(({ element }) => element);
@@ -2380,9 +2671,9 @@ export const convertSvgAssetPackageToDrawnix = (
       arrowCount: arrowItems.converted.length,
       rectCount: rects.length,
       componentCount:
-        externalComponents.length
-        + arrowItems.preserved.length
-        + residualFragments.length,
+        externalComponents.length +
+        arrowItems.preserved.length +
+        residualFragments.length,
       ignoredBackgroundCount,
       warnings,
     },

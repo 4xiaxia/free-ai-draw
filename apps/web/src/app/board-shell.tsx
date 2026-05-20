@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Drawnix, applyFontSchemeToCanvas } from '@drawnix/drawnix';
+import { Drawnix } from '@drawnix/drawnix';
 import { PlaitBoard } from '@plait/core';
 import localforage from 'localforage';
 import classNames from 'classnames';
@@ -32,6 +32,7 @@ type FloatingMenuPosition = {
 
 const FONT_SCHEME_KEY = 'drawnix_font_scheme';
 const DEFAULT_FONT_SCHEME_ID = 'academic';
+type FontSchemeId = (typeof FONT_SCHEMES)[number]['id'];
 
 const FONT_SCHEMES = [
   {
@@ -48,24 +49,43 @@ const FONT_SCHEMES = [
         label: '思源黑体',
         value:
           '"Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
+        isBuiltIn: true,
       },
       {
-        label: 'Arial',
-        value: 'Arial, sans-serif',
+        label: '霞鹜文楷',
+        value:
+          '"LXGW WenKai GB Screen", "Kaiti SC", "STKaiti", "Noto Serif SC", serif',
+        isBuiltIn: true,
       },
       {
         label: '宋体',
         value:
           '"Noto Serif SC", "Songti SC", "STSong", "Times New Roman", serif',
+        isBuiltIn: true,
       },
       {
-        label: '文楷',
-        value: '"Kaiti SC", "STKaiti", "Noto Serif SC", "Songti SC", serif',
+        label: '新宋体',
+        value: '"NSimSun", SimSun, "Songti SC", STSong, serif',
       },
       {
-        label: '等宽',
+        label: 'Source Sans',
+        value: '"Source Sans 3", "Helvetica Neue", Arial, sans-serif',
+        isBuiltIn: true,
+      },
+      {
+        label: 'Source Serif',
+        value: '"Source Serif 4", Georgia, "Times New Roman", serif',
+        isBuiltIn: true,
+      },
+      {
+        label: 'Times New Roman',
+        value: '"Times New Roman", Times, serif',
+      },
+      {
+        label: 'JetBrains',
         value:
-          '"Cascadia Code", "JetBrains Mono", "SFMono-Regular", Consolas, "Courier New", monospace',
+          '"JetBrains Mono", "Cascadia Code", "SFMono-Regular", Consolas, "Courier New", monospace',
+        isBuiltIn: true,
       },
     ],
     fontRoleFamilies: {
@@ -77,10 +97,10 @@ const FONT_SCHEMES = [
       annotation:
         '"Noto Serif SC", "Songti SC", "STSong", "Times New Roman", serif',
       'decorative-symbol':
-        '"Kaiti SC", "STKaiti", "Noto Serif SC", "Songti SC", serif',
+        '"LXGW WenKai GB Screen", "Kaiti SC", "STKaiti", "Noto Serif SC", "Songti SC", serif',
       emoji:
         '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Segoe UI Symbol", sans-serif',
-      code: '"Cascadia Code", "JetBrains Mono", "SFMono-Regular", Consolas, "Courier New", monospace',
+      code: '"JetBrains Mono", "Cascadia Code", "SFMono-Regular", Consolas, "Courier New", monospace',
     },
   },
   {
@@ -97,18 +117,38 @@ const FONT_SCHEMES = [
         label: '思源黑体',
         value:
           '"Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
+        isBuiltIn: true,
       },
       {
-        label: 'Arial',
-        value: 'Arial, sans-serif',
+        label: '霞鹜文楷',
+        value:
+          '"LXGW WenKai GB Screen", "Kaiti SC", "STKaiti", "Noto Serif SC", serif',
+        isBuiltIn: true,
       },
       {
-        label: '文楷',
-        value: '"Kaiti SC", "STKaiti", "Noto Serif SC", serif',
+        label: '站酷小薇',
+        value: '"ZCOOL XiaoWei", "Noto Serif SC", "Songti SC", serif',
+        isBuiltIn: true,
+      },
+      {
+        label: '站酷庆科',
+        value:
+          '"ZCOOL QingKe HuangYou", "Noto Sans SC", "PingFang SC", sans-serif',
+        isBuiltIn: true,
+      },
+      {
+        label: '马善政',
+        value: '"Ma Shan Zheng", "Kaiti SC", "STKaiti", cursive',
+        isBuiltIn: true,
       },
       {
         label: '宋体',
         value: '"Noto Serif SC", "Songti SC", "STSong", serif',
+        isBuiltIn: true,
+      },
+      {
+        label: '新宋体',
+        value: '"NSimSun", SimSun, "Songti SC", STSong, serif',
       },
       {
         label: '等宽',
@@ -123,7 +163,8 @@ const FONT_SCHEMES = [
       plain:
         '"Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
       annotation: '"Noto Serif SC", "Songti SC", "STSong", serif',
-      'decorative-symbol': '"Kaiti SC", "STKaiti", "Noto Serif SC", serif',
+      'decorative-symbol':
+        '"LXGW WenKai GB Screen", "Kaiti SC", "STKaiti", "Noto Serif SC", serif',
       emoji:
         '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif',
       code: '"Sarasa Mono SC", "Cascadia Code", Consolas, monospace',
@@ -139,11 +180,26 @@ const FONT_SCHEMES = [
         value: '"Helvetica Neue", Arial, sans-serif',
       },
       {
+        label: 'Source Sans',
+        value: '"Source Sans 3", "Helvetica Neue", Arial, sans-serif',
+        isBuiltIn: true,
+      },
+      {
+        label: 'IBM Plex',
+        value: '"IBM Plex Sans", "Helvetica Neue", Arial, sans-serif',
+        isBuiltIn: true,
+      },
+      {
         label: 'Arial',
         value: 'Arial, sans-serif',
       },
       {
-        label: 'Times',
+        label: 'Source Serif',
+        value: '"Source Serif 4", Georgia, "Times New Roman", serif',
+        isBuiltIn: true,
+      },
+      {
+        label: 'Times New Roman',
         value: '"Times New Roman", Times, serif',
       },
       {
@@ -151,9 +207,10 @@ const FONT_SCHEMES = [
         value: 'Georgia, serif',
       },
       {
-        label: 'Cascadia',
+        label: 'JetBrains',
         value:
-          '"Cascadia Code", "JetBrains Mono", "SFMono-Regular", Consolas, "Courier New", monospace',
+          '"JetBrains Mono", "Cascadia Code", "SFMono-Regular", Consolas, "Courier New", monospace',
+        isBuiltIn: true,
       },
     ],
     fontRoleFamilies: {
@@ -162,26 +219,13 @@ const FONT_SCHEMES = [
       body: '"Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif',
       plain:
         '"Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif',
-      annotation: '"Times New Roman", Georgia, "Songti SC", serif',
+      annotation:
+        '"Source Serif 4", "Times New Roman", Georgia, "Songti SC", serif',
       'decorative-symbol': '"Helvetica Neue", Arial, sans-serif',
       emoji:
         '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif',
-      code: '"Cascadia Code", "JetBrains Mono", "SFMono-Regular", Consolas, "Courier New", monospace',
+      code: '"JetBrains Mono", "Cascadia Code", "SFMono-Regular", Consolas, "Courier New", monospace',
     },
-  },
-] as const;
-
-const FONT_ROLE_PREVIEW_ITEMS = [
-  {
-    key: 'title',
-    label: '标题',
-    sample: 'Integrated Scientific Diagramming System',
-  },
-  { key: 'body', label: '正文', sample: 'User Natural Language Request' },
-  {
-    key: 'annotation',
-    label: '注释',
-    sample: '(Human-in-the-loop refinement)',
   },
 ] as const;
 
@@ -195,9 +239,9 @@ export function BoardShell({ onBackToLanding }: BoardShellProps) {
   const [boardsState, setBoardsState] = useState<BoardsState | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [tutorial, setTutorial] = useState(false);
-  const [fontSchemeId, setFontSchemeId] =
-    useState<(typeof FONT_SCHEMES)[number]['id']>('academic');
-  const [fontPanelOpen, setFontPanelOpen] = useState(false);
+  const [fontSchemeId, setFontSchemeId] = useState<FontSchemeId>(
+    DEFAULT_FONT_SCHEME_ID
+  );
   const [managerOpen, setManagerOpen] = useState(true);
   const [renamingBoardId, setRenamingBoardId] = useState<string | null>(null);
   const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null);
@@ -234,8 +278,8 @@ export function BoardShell({ onBackToLanding }: BoardShellProps) {
       const normalizedFontScheme =
         typeof storedFontScheme === 'string' &&
         FONT_SCHEMES.some((scheme) => scheme.id === storedFontScheme)
-          ? (storedFontScheme as (typeof FONT_SCHEMES)[number]['id'])
-          : 'academic';
+          ? (storedFontScheme as FontSchemeId)
+          : DEFAULT_FONT_SCHEME_ID;
       setFontSchemeId(normalizedFontScheme);
 
       const storedBoardsState =
@@ -442,7 +486,9 @@ export function BoardShell({ onBackToLanding }: BoardShellProps) {
 
   const handleMoveActiveBoardToFolder = useCallback(
     (folderId: string | null) => {
-      persistBoards((prev) => moveBoardToFolder(prev, prev.activeBoardId, folderId));
+      persistBoards((prev) =>
+        moveBoardToFolder(prev, prev.activeBoardId, folderId)
+      );
     },
     [persistBoards]
   );
@@ -896,7 +942,8 @@ export function BoardShell({ onBackToLanding }: BoardShellProps) {
                             className={styles.boardManagerFolderMenuTrigger}
                             title="文件夹操作"
                             ref={(element) => {
-                              folderMenuTriggerRefs.current[folder.id] = element;
+                              folderMenuTriggerRefs.current[folder.id] =
+                                element;
                             }}
                             aria-expanded={openFolderMenuId === folder.id}
                             onClick={(e) => {
@@ -1024,108 +1071,6 @@ export function BoardShell({ onBackToLanding }: BoardShellProps) {
             document.body
           )
         : null}
-
-      <div className={styles.floatingTools}>
-        {fontPanelOpen ? (
-          <div className={styles.fontPanel}>
-            <div className={styles.fontPanelHeader}>
-              <div>
-                <div className={styles.topBarTitle}>字体方案</div>
-                <div className={styles.schemeDescription}>
-                  {activeFontScheme.description}
-                </div>
-              </div>
-              <button
-                type="button"
-                className={styles.closeButton}
-                onClick={() => setFontPanelOpen(false)}
-              >
-                收起
-              </button>
-            </div>
-            <div className={styles.schemeActionRow}>
-              <label className={styles.schemeControl}>
-                <span className={styles.schemeLabel}>当前方案</span>
-                <select
-                  className={styles.schemeSelect}
-                  value={fontSchemeId}
-                  onChange={(event) => {
-                    const nextValue = event.target
-                      .value as (typeof FONT_SCHEMES)[number]['id'];
-                    setFontSchemeId(nextValue);
-                    localforage.setItem(FONT_SCHEME_KEY, nextValue);
-                  }}
-                >
-                  {FONT_SCHEMES.map((scheme) => (
-                    <option key={scheme.id} value={scheme.id}>
-                      {scheme.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button
-                type="button"
-                className={styles.applyButton}
-                onClick={() => {
-                  if (!boardRef.current) {
-                    return;
-                  }
-                  applyFontSchemeToCanvas(
-                    boardRef.current,
-                    activeFontScheme.fontRoleFamilies
-                  );
-                }}
-              >
-                应用到画布
-              </button>
-              <button
-                type="button"
-                className={styles.resetButton}
-                disabled={fontSchemeId === DEFAULT_FONT_SCHEME_ID}
-                onClick={() => {
-                  setFontSchemeId(DEFAULT_FONT_SCHEME_ID);
-                  localforage.setItem(FONT_SCHEME_KEY, DEFAULT_FONT_SCHEME_ID);
-                }}
-              >
-                恢复默认
-              </button>
-            </div>
-            <div className={styles.ruleHint}>
-              <div className={styles.ruleHintTitle}>当前规则</div>
-              <div className={styles.ruleHintText}>
-                标题、正文、注释按当前全局角色字体策略导入；描边标题、emoji
-                和装饰符号优先走保真片段。
-              </div>
-            </div>
-            <div className={styles.rolePreviewList}>
-              {FONT_ROLE_PREVIEW_ITEMS.map((item) => (
-                <div className={styles.rolePreviewCard} key={item.key}>
-                  <div className={styles.rolePreviewLabel}>{item.label}</div>
-                  <div
-                    className={styles.rolePreviewText}
-                    style={{
-                      fontFamily:
-                        activeFontScheme.fontRoleFamilies[
-                          item.key as keyof typeof activeFontScheme.fontRoleFamilies
-                        ],
-                    }}
-                  >
-                    {item.sample}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <button
-            type="button"
-            className={styles.openButton}
-            onClick={() => setFontPanelOpen(true)}
-          >
-            字体方案
-          </button>
-        )}
-      </div>
     </div>
   );
 }

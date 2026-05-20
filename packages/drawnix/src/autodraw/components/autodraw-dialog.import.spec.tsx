@@ -1233,7 +1233,13 @@ describe('AutodrawDialog import semantics', () => {
       ) as HTMLImageElement | null;
       expect(historyPreviewImage).toBeTruthy();
     });
-    expect(historyPreviewImage?.getAttribute('src')).toContain('figure.png');
+    const historyPreviewImageElement = container.querySelector(
+      '.autodraw-history-card__preview .autodraw-asset-card__image'
+    ) as HTMLImageElement | null;
+    expect(historyPreviewImageElement).toBeTruthy();
+    expect(historyPreviewImageElement!.getAttribute('src')).toContain(
+      'figure.png'
+    );
   });
 
   it('stops the background cancel watcher when the same job is foregrounded again', async () => {
@@ -1593,6 +1599,11 @@ describe('AutodrawDialog import semantics', () => {
         value: '2K',
       },
     });
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'dialog.autodraw.figureLanguageChinese',
+      })
+    );
     fireEvent.change(
       screen.getByDisplayValue('icon,person,robot,animal,CurvedArrow'),
       {
@@ -1618,9 +1629,158 @@ describe('AutodrawDialog import semantics', () => {
       const payload = JSON.parse(String(jobCall?.[1]?.body));
       expect(payload.method_text).toBe('pipeline steps');
       expect(payload.image_size).toBe('2K');
+      expect(payload.figure_language).toBe('zh');
       expect(payload.sam_prompt).toBe('icon,diagram,arrow');
       expect(payload.start_stage).toBe(1);
       expect(payload.source_figure_path).toBeNull();
+      expect(payload.ca_context).toBeNull();
+    });
+  });
+
+  it('generates intent options with a dedicated CA model and submits selected CA context', async () => {
+    mockFetch.mockImplementation(
+      (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.includes('/api/jobs?limit=12')) {
+          return Promise.resolve(createJsonResponse([]));
+        }
+        if (url.endsWith('/api/jobs/clarify') && init?.method === 'POST') {
+          return Promise.resolve(
+            createJsonResponse({
+              context_summary: 'Prefer a compact editorial pipeline.',
+              questions: [
+                {
+                  id: 'q1',
+                  title: 'Which visual direction should lead?',
+                  recommended_option_id: 'compact',
+                  options: [
+                    {
+                      id: 'compact',
+                      label: 'Compact editorial',
+                      description: 'Dense figure with restrained annotations',
+                    },
+                    {
+                      id: 'character',
+                      label: 'Character-led',
+                      description: 'Cute characters guide the method',
+                    },
+                  ],
+                },
+              ],
+            })
+          );
+        }
+        if (url.endsWith('/api/jobs') && init?.method === 'POST') {
+          return Promise.resolve(
+            createJsonResponse({
+              job_id: 'job-ca',
+              status: 'queued',
+            })
+          );
+        }
+        if (url.includes('/api/jobs/job-ca/logs?offset=0')) {
+          return Promise.resolve(
+            createJsonResponse({
+              job_id: 'job-ca',
+              offset: 0,
+              next_offset: 0,
+              completed: true,
+              lines: [],
+            })
+          );
+        }
+        if (url.endsWith('/api/jobs/job-ca')) {
+          return Promise.resolve(
+            createJsonResponse({
+              job_id: 'job-ca',
+              status: 'failed',
+              current_stage: 1,
+              failed_stage: 1,
+              error_message: 'stage failed',
+              artifacts: [],
+            })
+          );
+        }
+        return Promise.resolve(createJsonResponse([]));
+      }
+    );
+
+    localStorage.setItem(
+      'drawnix:autodraw-draft:v2',
+      JSON.stringify({
+        caBaseUrl: 'https://intent.example.com/v1',
+        caModel: 'intent-model-from-draft',
+      })
+    );
+
+    render(<AutodrawDialog />);
+
+    fireEvent.change(
+      screen.getByPlaceholderText('dialog.autodraw.placeholder'),
+      {
+        target: {
+          value: 'clarify this pipeline',
+        },
+      }
+    );
+
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: 'dialog.autodraw.ca.generate',
+        })
+      );
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Compact editorial')).toBeTruthy();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Character-led'));
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole('button', { name: 'dialog.autodraw.generate' })
+      );
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      const clarifyCall = mockFetch.mock.calls.find(([url, options]) => {
+        return (
+          String(url).endsWith('/api/jobs/clarify') &&
+          options?.method === 'POST'
+        );
+      });
+      expect(clarifyCall).toBeTruthy();
+      const clarifyPayload = JSON.parse(String(clarifyCall?.[1]?.body));
+      expect(clarifyPayload.method_text).toBe('clarify this pipeline');
+      expect(clarifyPayload.ca_base_url).toBe('https://intent.example.com/v1');
+      expect(clarifyPayload.ca_api_key).toBeNull();
+      expect(clarifyPayload.ca_model).toBe('intent-model-from-draft');
+      expect(clarifyPayload.ca_language).toBe('zh');
+
+      const jobCall = mockFetch.mock.calls.find(
+        ([url, options]) =>
+          String(url).endsWith('/api/jobs') && options?.method === 'POST'
+      );
+      expect(jobCall).toBeTruthy();
+      const payload = JSON.parse(String(jobCall?.[1]?.body));
+      expect(payload.ca_context.context_summary).toBe(
+        'Prefer a compact editorial pipeline.'
+      );
+      expect(payload.ca_context.answers).toEqual([
+        {
+          question_id: 'q1',
+          option_id: 'character',
+          label: 'Character-led',
+          description: 'Cute characters guide the method',
+        },
+      ]);
     });
   });
 
@@ -2518,6 +2678,75 @@ describe('AutodrawDialog import semantics', () => {
           name: 'dialog.autodraw.openAssetActions: autodraw-new',
         })
       ).toBeTruthy();
+    });
+  });
+
+  it('loads and renders the AutoDraw process trace card', async () => {
+    mockFetch.mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/api/jobs/job-trace/artifacts/process_trace.json')) {
+        return Promise.resolve(
+          createJsonResponse({
+            schema_version: 1,
+            pipeline: 'method_to_svg',
+            settings: {
+              provider: 'local',
+              figure_language: 'en',
+            },
+            stages: [
+              {
+                id: 'stage_1_image_generation',
+                step: 1,
+                title: 'Generate raster figure',
+                status: 'completed',
+                summary: 'Generate the first academic figure image.',
+                data_flow: ['method_text', 'image prompt', 'figure.png'],
+                inputs: {
+                  method_text: 'trace method',
+                },
+                outputs: {
+                  figure_path: 'figure.png',
+                },
+                prompts: [
+                  {
+                    title: 'Image generation prompt',
+                    provider: 'local',
+                    model: 'image-model',
+                    content: 'prompt body for trace',
+                  },
+                ],
+              },
+            ],
+          })
+        );
+      }
+      return Promise.resolve(createJsonResponse([]));
+    });
+
+    localStorage.setItem(
+      'drawnix:autodraw-draft:v2',
+      JSON.stringify({
+        jobId: 'job-trace',
+      })
+    );
+
+    render(<AutodrawDialog />);
+
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: 'dialog.autodraw.processTrace.button',
+        })
+      );
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('dialog.autodraw.processTrace.title')
+      ).toBeTruthy();
+      expect(screen.getByText('Generate raster figure')).toBeTruthy();
+      expect(screen.getByText('Image generation prompt')).toBeTruthy();
     });
   });
 });

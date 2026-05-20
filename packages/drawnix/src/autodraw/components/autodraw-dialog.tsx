@@ -102,6 +102,66 @@ interface JobLogChunkResponse {
   lines: string[];
 }
 
+type AutodrawProcessTracePrompt = {
+  title?: string;
+  model?: string;
+  provider?: string;
+  content?: string;
+};
+
+type AutodrawProcessTraceStage = {
+  id?: string;
+  step?: number | string;
+  title?: string;
+  summary?: string;
+  status?: string;
+  inputs?: Record<string, unknown>;
+  outputs?: Record<string, unknown>;
+  prompts?: AutodrawProcessTracePrompt[];
+  data_flow?: string[];
+};
+
+type AutodrawProcessTrace = {
+  schema_version?: number;
+  title?: string;
+  created_at?: string;
+  updated_at?: string;
+  pipeline?: string;
+  settings?: Record<string, unknown>;
+  stages?: AutodrawProcessTraceStage[];
+};
+
+type AutodrawClarificationOption = {
+  id: string;
+  label: string;
+  description?: string | null;
+};
+
+type AutodrawClarificationQuestion = {
+  id: string;
+  title: string;
+  options: AutodrawClarificationOption[];
+  recommended_option_id?: string | null;
+};
+
+type AutodrawClarificationAnswer = {
+  question_id: string;
+  option_id: string;
+  label?: string | null;
+  description?: string | null;
+};
+
+type AutodrawClarificationContext = {
+  questions: AutodrawClarificationQuestion[];
+  answers: AutodrawClarificationAnswer[];
+  context_summary?: string | null;
+};
+
+interface ClarifyJobResponse {
+  questions: AutodrawClarificationQuestion[];
+  context_summary: string;
+}
+
 type AssemblyProgress = {
   active: boolean;
   totalBatches: number;
@@ -124,8 +184,16 @@ type AssetPreviewState = {
 
 type AutodrawInputMode = 'generate' | 'source';
 type AutodrawImageSize = '2K' | '4K';
+type AutodrawFigureLanguage = 'en' | 'zh';
+type AutodrawCaLanguage = 'zh' | 'en';
 type AutodrawSourceRunMode = 'segmented' | 'direct-svg';
 type ReferenceSource = 'gallery' | 'upload' | null;
+type AutodrawClarificationStatus =
+  | 'idle'
+  | 'loading'
+  | 'ready'
+  | 'skipped'
+  | 'error';
 
 type ReferenceGalleryState =
   | 'idle'
@@ -177,8 +245,12 @@ type AutodrawPersistedDraft = {
   methodText?: string;
   provider?: string;
   baseUrl?: string;
+  caBaseUrl?: string;
+  caModel?: string;
+  caLanguage?: AutodrawCaLanguage;
   imageModel?: string;
   imageSize?: AutodrawImageSize;
+  figureLanguage?: AutodrawFigureLanguage;
   inputMode?: AutodrawInputMode;
   sourceRunMode?: AutodrawSourceRunMode;
   removeBackground?: boolean;
@@ -192,15 +264,28 @@ type AutodrawPersistedDraft = {
   referenceSource?: ReferenceSource;
 };
 
-const readDefaultBackendUrl = () => {
-  const envValue = import.meta.env.VITE_AUTODRAW_BACKEND_URL?.trim();
-  if (envValue) {
-    return envValue;
-  }
-  return 'http://127.0.0.1:8001';
+const readViteEnv = (key: string) => {
+  const env = (
+    import.meta as ImportMeta & {
+      env?: Record<string, string | undefined>;
+    }
+  ).env;
+  return env?.[key]?.trim() || '';
 };
 
+const readDefaultBackendUrl = () =>
+  readViteEnv('VITE_AUTODRAW_BACKEND_URL') || 'http://127.0.0.1:8001';
+
+const readDefaultCaModel = () => readViteEnv('VITE_AUTODRAW_CA_MODEL');
+
+const readDefaultCaBaseUrl = () => readViteEnv('VITE_AUTODRAW_CA_BASE_URL');
+
+const readDefaultCaApiKey = () => readViteEnv('VITE_AUTODRAW_CA_API_KEY');
+
 const DEFAULT_BACKEND_URL = readDefaultBackendUrl();
+const DEFAULT_AUTODRAW_CA_MODEL = readDefaultCaModel();
+const DEFAULT_AUTODRAW_CA_BASE_URL = readDefaultCaBaseUrl();
+const DEFAULT_AUTODRAW_CA_API_KEY = readDefaultCaApiKey();
 const AUTODRAW_DRAFT_STORAGE_KEY = 'drawnix:autodraw-draft:v2';
 const AUTODRAW_HISTORY_PREVIEW_LIMIT = 12;
 const AUTODRAW_REALTIME_POLL_INTERVAL = 1200;
@@ -242,6 +327,12 @@ const AUTODRAW_REALTIME_PROBE_DEFINITIONS = [
     path: 'final.svg',
     kind: 'final_svg',
     minStep: 3,
+  },
+  {
+    name: 'process_trace.json',
+    path: 'process_trace.json',
+    kind: 'process_trace',
+    minStep: 0,
   },
 ] as const;
 
@@ -300,6 +391,46 @@ const normalizeAutodrawImageSize = (
   value?: string | null
 ): AutodrawImageSize => {
   return value === '2K' ? '2K' : DEFAULT_AUTODRAW_IMAGE_SIZE;
+};
+
+const normalizeAutodrawFigureLanguage = (
+  value?: string | null
+): AutodrawFigureLanguage => {
+  return value === 'zh' ? 'zh' : 'en';
+};
+
+const normalizeAutodrawCaLanguage = (
+  value?: string | null
+): AutodrawCaLanguage => {
+  return value === 'en' ? 'en' : 'zh';
+};
+
+const formatProcessTraceValue = (value: unknown): string => {
+  if (value === null || value === undefined || value === '') {
+    return '—';
+  }
+  if (Array.isArray(value)) {
+    return value
+      .map((item) =>
+        typeof item === 'object' && item !== null
+          ? JSON.stringify(item)
+          : String(item)
+      )
+      .join(', ');
+  }
+  if (typeof value === 'object') {
+    return JSON.stringify(value, null, 2);
+  }
+  return String(value);
+};
+
+const getProcessTraceStepLabel = (step: number | string | undefined) => {
+  if (step === undefined || step === null || step === '') {
+    return '—';
+  }
+  return typeof step === 'number'
+    ? String(step).padStart(2, '0')
+    : String(step);
 };
 
 const normalizeAutodrawSourceRunMode = (
@@ -527,11 +658,24 @@ const AutodrawDialog = () => {
   const [baseUrl, setBaseUrl] = useState(
     persistedDraftRef.current.baseUrl || ''
   );
+  const [caBaseUrl, setCaBaseUrl] = useState(
+    persistedDraftRef.current.caBaseUrl || DEFAULT_AUTODRAW_CA_BASE_URL
+  );
+  const [caApiKey, setCaApiKey] = useState(DEFAULT_AUTODRAW_CA_API_KEY);
+  const [caModel, setCaModel] = useState(
+    persistedDraftRef.current.caModel || DEFAULT_AUTODRAW_CA_MODEL
+  );
+  const [caLanguage, setCaLanguage] = useState<AutodrawCaLanguage>(
+    normalizeAutodrawCaLanguage(persistedDraftRef.current.caLanguage)
+  );
   const [imageModel, setImageModel] = useState(
     persistedDraftRef.current.imageModel || ''
   );
   const [imageSize, setImageSize] = useState<AutodrawImageSize>(
     normalizeAutodrawImageSize(persistedDraftRef.current.imageSize)
+  );
+  const [figureLanguage, setFigureLanguage] = useState<AutodrawFigureLanguage>(
+    normalizeAutodrawFigureLanguage(persistedDraftRef.current.figureLanguage)
   );
   const [samPrompt, setSamPrompt] = useState(
     normalizeSamPromptValue(persistedDraftRef.current.samPrompt)
@@ -561,6 +705,14 @@ const AutodrawDialog = () => {
   const [realtimeArtifacts, setRealtimeArtifacts] = useState<
     AutodrawArtifact[]
   >([]);
+  const [processTrace, setProcessTrace] = useState<AutodrawProcessTrace | null>(
+    null
+  );
+  const [processTraceOpen, setProcessTraceOpen] = useState(false);
+  const [processTraceStatus, setProcessTraceStatus] = useState<
+    'idle' | 'loading' | 'ready' | 'error'
+  >('idle');
+  const [processTraceError, setProcessTraceError] = useState('');
   const [workspaceReplayStage, setWorkspaceReplayStage] = useState(1);
   const [logMode, setLogMode] = useState<'idle' | 'sse' | 'polling'>('idle');
   const [summary, setSummary] = useState<SvgImportSummary>(emptySummary);
@@ -592,6 +744,16 @@ const AutodrawDialog = () => {
   const [selectedGalleryItemId, setSelectedGalleryItemId] = useState(
     persistedDraftRef.current.selectedGalleryItemId || ''
   );
+  const [clarificationStatus, setClarificationStatus] =
+    useState<AutodrawClarificationStatus>('idle');
+  const [clarificationQuestions, setClarificationQuestions] = useState<
+    AutodrawClarificationQuestion[]
+  >([]);
+  const [clarificationAnswers, setClarificationAnswers] = useState<
+    Record<string, string>
+  >({});
+  const [clarificationSummary, setClarificationSummary] = useState('');
+  const [clarificationError, setClarificationError] = useState('');
 
   const rootRef = useRef<HTMLDivElement | null>(null);
   const pollingTimerRef = useRef<number | null>(null);
@@ -778,8 +940,12 @@ const AutodrawDialog = () => {
       methodText,
       provider,
       baseUrl,
+      caBaseUrl,
+      caModel,
+      caLanguage,
       imageModel,
       imageSize,
+      figureLanguage,
       samPrompt: normalizeSamPromptValue(samPrompt),
       svgModel,
       jobId,
@@ -812,8 +978,12 @@ const AutodrawDialog = () => {
     methodText,
     provider,
     baseUrl,
+    caBaseUrl,
+    caModel,
+    caLanguage,
     imageModel,
     imageSize,
+    figureLanguage,
     samPrompt,
     svgModel,
     jobId,
@@ -1753,6 +1923,10 @@ const AutodrawDialog = () => {
     setLogs([]);
     setArtifacts([]);
     setRealtimeArtifacts([]);
+    setProcessTrace(null);
+    setProcessTraceOpen(false);
+    setProcessTraceStatus('idle');
+    setProcessTraceError('');
     setSummary(emptySummary);
     setPreviewElements([]);
     setLastImportedElementIds([]);
@@ -1914,6 +2088,139 @@ const AutodrawDialog = () => {
     await loadJobById(jobIdInput);
   };
 
+  const loadProcessTrace = async () => {
+    if (!jobId) {
+      setProcessTraceError(t('dialog.autodraw.processTrace.noJob'));
+      setProcessTraceStatus('error');
+      return;
+    }
+
+    setProcessTraceStatus('loading');
+    setProcessTraceError('');
+
+    try {
+      const base = normalizeBaseUrl(backendUrl);
+      const response = await fetch(
+        `${base}/api/jobs/${jobId}/artifacts/process_trace.json?t=${Date.now()}`,
+        { cache: 'no-store' }
+      );
+      if (!response.ok) {
+        throw new Error(t('dialog.autodraw.processTrace.unavailable'));
+      }
+      const data = (await response.json()) as AutodrawProcessTrace;
+      setProcessTrace(data);
+      setProcessTraceStatus('ready');
+    } catch (error) {
+      setProcessTraceStatus('error');
+      setProcessTraceError(
+        error instanceof Error
+          ? error.message
+          : t('dialog.autodraw.processTrace.unavailable')
+      );
+    }
+  };
+
+  const handleToggleProcessTrace = async () => {
+    if (processTraceOpen) {
+      setProcessTraceOpen(false);
+      return;
+    }
+    setProcessTraceOpen(true);
+    if (!processTrace || processTraceStatus === 'error') {
+      await loadProcessTrace();
+    }
+  };
+
+  const handleGenerateClarification = async () => {
+    if (isSourceInputMode) {
+      return;
+    }
+    if (!methodText.trim()) {
+      setErrorMessage(t('dialog.autodraw.error.noMethodText'));
+      return;
+    }
+
+    setClarificationStatus('loading');
+    setClarificationError('');
+    setClarificationQuestions([]);
+    setClarificationAnswers({});
+    setClarificationSummary('');
+    setErrorMessage('');
+
+    try {
+      const base = normalizeBaseUrl(backendUrl);
+      const response = await fetch(`${base}/api/jobs/clarify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          method_text: methodText,
+          provider,
+          api_key: apiKey || null,
+          base_url: baseUrl || null,
+          ca_api_key: caApiKey || null,
+          ca_base_url: caBaseUrl || null,
+          ca_model: caModel || null,
+          ca_language: caLanguage,
+          image_model: imageModel || null,
+          svg_model: svgModel || null,
+        }),
+      });
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      const data: ClarifyJobResponse = await response.json();
+      const nextAnswers: Record<string, string> = {};
+      data.questions.forEach((question) => {
+        const recommended =
+          question.options.find(
+            (option) => option.id === question.recommended_option_id
+          ) || question.options[0];
+        if (recommended) {
+          nextAnswers[question.id] = recommended.id;
+        }
+      });
+      setClarificationQuestions(data.questions);
+      setClarificationAnswers(nextAnswers);
+      setClarificationSummary(data.context_summary || '');
+      setClarificationStatus('ready');
+    } catch (error) {
+      setClarificationStatus('error');
+      setClarificationError(
+        error instanceof Error ? error.message : t('dialog.autodraw.ca.error')
+      );
+    }
+  };
+
+  const handleSelectClarificationOption = (
+    questionId: string,
+    optionId: string
+  ) => {
+    setClarificationStatus((current) =>
+      current === 'skipped' ? 'ready' : current
+    );
+    setClarificationAnswers((current) => ({
+      ...current,
+      [questionId]: optionId,
+    }));
+  };
+
+  const handleSkipClarification = () => {
+    setClarificationStatus('skipped');
+    setClarificationError('');
+    setClarificationAnswers({});
+  };
+
+  const handleClearClarification = () => {
+    setClarificationStatus('idle');
+    setClarificationQuestions([]);
+    setClarificationAnswers({});
+    setClarificationSummary('');
+    setClarificationError('');
+  };
+
   const handleSubmit = async () => {
     if (!isSourceInputMode && !methodText.trim()) {
       setErrorMessage(t('dialog.autodraw.error.noMethodText'));
@@ -1982,9 +2289,11 @@ const AutodrawDialog = () => {
           base_url: baseUrl || null,
           image_model: imageModel || null,
           image_size: imageSize,
+          figure_language: figureLanguage,
           sam_prompt: normalizedSamPrompt,
           remove_background: removeBackground,
           svg_model: svgModel || null,
+          ca_context: clarificationContext,
           sam_backend: 'api',
           reference_image_path: isSourceInputMode
             ? null
@@ -2185,6 +2494,15 @@ const AutodrawDialog = () => {
   const handleInputModeChange = (nextMode: AutodrawInputMode) => {
     setInputMode(nextMode);
     setErrorMessage('');
+  };
+
+  const handleCaLanguageChange = (nextLanguage: AutodrawCaLanguage) => {
+    setCaLanguage(nextLanguage);
+    setClarificationStatus('idle');
+    setClarificationQuestions([]);
+    setClarificationAnswers({});
+    setClarificationSummary('');
+    setClarificationError('');
   };
 
   const handleReferenceImageChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -2402,6 +2720,48 @@ const AutodrawDialog = () => {
     () => normalizeSamPromptValue(samPrompt),
     [samPrompt]
   );
+  const clarificationContext =
+    useMemo<AutodrawClarificationContext | null>(() => {
+      if (
+        isSourceInputMode ||
+        clarificationStatus !== 'ready' ||
+        clarificationQuestions.length === 0
+      ) {
+        return null;
+      }
+
+      const answers: AutodrawClarificationAnswer[] = clarificationQuestions
+        .map((question) => {
+          const optionId = clarificationAnswers[question.id];
+          const option = question.options.find((item) => item.id === optionId);
+          if (!option) {
+            return null;
+          }
+          return {
+            question_id: question.id,
+            option_id: option.id,
+            label: option.label,
+            description: option.description || null,
+          };
+        })
+        .filter(Boolean) as AutodrawClarificationAnswer[];
+
+      if (!answers.length) {
+        return null;
+      }
+
+      return {
+        questions: clarificationQuestions,
+        answers,
+        context_summary: clarificationSummary || null,
+      };
+    }, [
+      clarificationAnswers,
+      clarificationQuestions,
+      clarificationStatus,
+      clarificationSummary,
+      isSourceInputMode,
+    ]);
 
   const stagePreviewAssets = useMemo(() => {
     const previewMap = new Map<number, AutodrawAssetItem>();
@@ -2485,6 +2845,17 @@ const AutodrawDialog = () => {
     if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
       event.preventDefault();
       void handleSubmit();
+    }
+  };
+
+  const handleMethodTextChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
+    setMethodText(event.target.value);
+    if (clarificationStatus !== 'idle') {
+      setClarificationStatus('idle');
+      setClarificationQuestions([]);
+      setClarificationAnswers({});
+      setClarificationSummary('');
+      setClarificationError('');
     }
   };
 
@@ -2959,12 +3330,187 @@ const AutodrawDialog = () => {
                   <textarea
                     rows={7}
                     value={methodText}
-                    onChange={(event) => setMethodText(event.target.value)}
+                    onChange={handleMethodTextChange}
                     onKeyDown={handleMethodTextKeyDown}
                     placeholder={t('dialog.autodraw.placeholder')}
                     className="autodraw-input autodraw-input--method"
                   />
                 </label>
+              )}
+
+              {!isSourceInputMode && (
+                <section className="autodraw-ca-panel">
+                  <div className="autodraw-ca-panel__head">
+                    <div>
+                      <div className="autodraw-sec-title">
+                        {t('dialog.autodraw.ca.title')}
+                        <span>{t('dialog.autodraw.ca.kicker')}</span>
+                      </div>
+                      <p className="autodraw-dialog__hint">
+                        {clarificationStatus === 'ready'
+                          ? t('dialog.autodraw.ca.readyHint')
+                          : clarificationStatus === 'skipped'
+                          ? t('dialog.autodraw.ca.skippedHint')
+                          : t('dialog.autodraw.ca.hint')}
+                      </p>
+                      <div className="autodraw-ca-language">
+                        <span>{t('dialog.autodraw.ca.language')}</span>
+                        <div className="autodraw-ca-language__switch">
+                          <button
+                            type="button"
+                            onClick={() => handleCaLanguageChange('zh')}
+                            disabled={
+                              isJobBusy || clarificationStatus === 'loading'
+                            }
+                            aria-pressed={caLanguage === 'zh'}
+                            className={classNames(
+                              'autodraw-ca-language__button',
+                              {
+                                'autodraw-ca-language__button--active':
+                                  caLanguage === 'zh',
+                              }
+                            )}
+                          >
+                            {t('dialog.autodraw.ca.languageChinese')}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleCaLanguageChange('en')}
+                            disabled={
+                              isJobBusy || clarificationStatus === 'loading'
+                            }
+                            aria-pressed={caLanguage === 'en'}
+                            className={classNames(
+                              'autodraw-ca-language__button',
+                              {
+                                'autodraw-ca-language__button--active':
+                                  caLanguage === 'en',
+                              }
+                            )}
+                          >
+                            {t('dialog.autodraw.ca.languageEnglish')}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    <span
+                      className={classNames(
+                        'autodraw-ca-panel__status',
+                        `autodraw-ca-panel__status--${clarificationStatus}`
+                      )}
+                    >
+                      {t(`dialog.autodraw.ca.status.${clarificationStatus}`)}
+                    </span>
+                  </div>
+
+                  {clarificationSummary && clarificationStatus === 'ready' && (
+                    <div className="autodraw-ca-panel__summary">
+                      <span>{t('dialog.autodraw.ca.summary')}</span>
+                      {clarificationSummary}
+                    </div>
+                  )}
+
+                  {clarificationStatus === 'error' && clarificationError && (
+                    <div className="autodraw-ca-panel__error">
+                      {clarificationError}
+                    </div>
+                  )}
+
+                  {clarificationQuestions.length > 0 &&
+                    clarificationStatus !== 'skipped' && (
+                      <div className="autodraw-ca-question-list">
+                        {clarificationQuestions.map((question, index) => (
+                          <div
+                            key={question.id}
+                            className="autodraw-ca-question"
+                          >
+                            <div className="autodraw-ca-question__title">
+                              <span>{String(index + 1).padStart(2, '0')}</span>
+                              {question.title}
+                            </div>
+                            <div className="autodraw-ca-options">
+                              {question.options.map((option) => {
+                                const isSelected =
+                                  clarificationAnswers[question.id] ===
+                                  option.id;
+                                const isRecommended =
+                                  question.recommended_option_id === option.id;
+                                return (
+                                  <button
+                                    key={option.id}
+                                    type="button"
+                                    onClick={() =>
+                                      handleSelectClarificationOption(
+                                        question.id,
+                                        option.id
+                                      )
+                                    }
+                                    aria-pressed={isSelected}
+                                    className={classNames(
+                                      'autodraw-ca-option',
+                                      {
+                                        'autodraw-ca-option--selected':
+                                          isSelected,
+                                      }
+                                    )}
+                                  >
+                                    <span className="autodraw-ca-option__label">
+                                      {option.label}
+                                      {isRecommended && (
+                                        <em>
+                                          {t('dialog.autodraw.ca.recommended')}
+                                        </em>
+                                      )}
+                                    </span>
+                                    {option.description && (
+                                      <span className="autodraw-ca-option__desc">
+                                        {option.description}
+                                      </span>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                  <div className="autodraw-ca-panel__actions">
+                    <button
+                      type="button"
+                      onClick={() => void handleGenerateClarification()}
+                      disabled={isJobBusy || clarificationStatus === 'loading'}
+                      className="autodraw-button autodraw-button--secondary autodraw-button--compact"
+                    >
+                      {clarificationStatus === 'loading'
+                        ? t('dialog.autodraw.ca.generating')
+                        : clarificationQuestions.length
+                        ? t('dialog.autodraw.ca.regenerate')
+                        : t('dialog.autodraw.ca.generate')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSkipClarification}
+                      disabled={isJobBusy || clarificationStatus === 'loading'}
+                      className="autodraw-link-btn autodraw-link-btn--inline"
+                    >
+                      {t('dialog.autodraw.ca.skip')}
+                    </button>
+                    {clarificationQuestions.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleClearClarification}
+                        disabled={
+                          isJobBusy || clarificationStatus === 'loading'
+                        }
+                        className="autodraw-link-btn autodraw-link-btn--inline"
+                      >
+                        {t('dialog.autodraw.ca.clear')}
+                      </button>
+                    )}
+                  </div>
+                </section>
               )}
 
               <label className="autodraw-dialog__field">
@@ -2986,6 +3532,45 @@ const AutodrawDialog = () => {
                   {t('dialog.autodraw.imageSizeHint')}
                 </p>
               </label>
+
+              <div className="autodraw-dialog__field">
+                <span className="autodraw-dialog__label">
+                  {t('dialog.autodraw.figureLanguage')}
+                </span>
+                <div className="autodraw-mode-switch">
+                  <button
+                    type="button"
+                    onClick={() => setFigureLanguage('en')}
+                    disabled={isSourceInputMode || isJobBusy}
+                    aria-pressed={figureLanguage === 'en'}
+                    className={classNames('autodraw-mode-switch__button', {
+                      'autodraw-mode-switch__button--active':
+                        figureLanguage === 'en',
+                    })}
+                  >
+                    {t('dialog.autodraw.figureLanguageEnglish')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFigureLanguage('zh')}
+                    disabled={isSourceInputMode || isJobBusy}
+                    aria-pressed={figureLanguage === 'zh'}
+                    className={classNames('autodraw-mode-switch__button', {
+                      'autodraw-mode-switch__button--active':
+                        figureLanguage === 'zh',
+                    })}
+                  >
+                    {t('dialog.autodraw.figureLanguageChinese')}
+                  </button>
+                </div>
+                <p className="autodraw-dialog__hint">
+                  {isSourceInputMode
+                    ? t('dialog.autodraw.figureLanguageHintSource')
+                    : figureLanguage === 'zh'
+                    ? t('dialog.autodraw.figureLanguageHintChinese')
+                    : t('dialog.autodraw.figureLanguageHintEnglish')}
+                </p>
+              </div>
 
               <label className="autodraw-dialog__field">
                 <span className="autodraw-field-label">
@@ -3379,6 +3964,39 @@ const AutodrawDialog = () => {
                     </label>
                     <label className="autodraw-dialog__field">
                       <span className="autodraw-dialog__label">
+                        {t('dialog.autodraw.caBaseUrl')}
+                      </span>
+                      <input
+                        value={caBaseUrl}
+                        onChange={(event) => setCaBaseUrl(event.target.value)}
+                        placeholder={DEFAULT_AUTODRAW_CA_BASE_URL || undefined}
+                        className="autodraw-input"
+                      />
+                    </label>
+                    <label className="autodraw-dialog__field">
+                      <span className="autodraw-dialog__label">
+                        {t('dialog.autodraw.caApiKey')}
+                      </span>
+                      <input
+                        type="password"
+                        value={caApiKey}
+                        onChange={(event) => setCaApiKey(event.target.value)}
+                        className="autodraw-input"
+                      />
+                    </label>
+                    <label className="autodraw-dialog__field">
+                      <span className="autodraw-dialog__label">
+                        {t('dialog.autodraw.caModel')}
+                      </span>
+                      <input
+                        value={caModel}
+                        onChange={(event) => setCaModel(event.target.value)}
+                        placeholder={DEFAULT_AUTODRAW_CA_MODEL || undefined}
+                        className="autodraw-input"
+                      />
+                    </label>
+                    <label className="autodraw-dialog__field">
+                      <span className="autodraw-dialog__label">
                         {t('dialog.autodraw.svgModel')}
                       </span>
                       <input
@@ -3521,10 +4139,193 @@ const AutodrawDialog = () => {
                   <div className="autodraw-sec-title">
                     Pipeline<span>· 文本 → 矢量</span>
                   </div>
-                  <span className="autodraw-anno autodraw-anno--small">
-                    当前 · {currentStageLabel}
-                  </span>
+                  <div className="autodraw-sec-actions">
+                    <button
+                      type="button"
+                      className={classNames(
+                        'autodraw-mini-btn',
+                        'autodraw-mini-btn--trace',
+                        {
+                          'autodraw-mini-btn--active': processTraceOpen,
+                        }
+                      )}
+                      onClick={() => void handleToggleProcessTrace()}
+                      disabled={!jobId || processTraceStatus === 'loading'}
+                    >
+                      {processTraceStatus === 'loading'
+                        ? t('dialog.autodraw.processTrace.loading')
+                        : t('dialog.autodraw.processTrace.button')}
+                    </button>
+                    <span className="autodraw-anno autodraw-anno--small">
+                      当前 · {currentStageLabel}
+                    </span>
+                  </div>
                 </div>
+
+                {processTraceOpen && (
+                  <section className="autodraw-process-card">
+                    <div className="autodraw-process-card__head">
+                      <div>
+                        <div className="autodraw-process-card__kicker">
+                          {t('dialog.autodraw.processTrace.kicker')}
+                        </div>
+                        <h3>{t('dialog.autodraw.processTrace.title')}</h3>
+                      </div>
+                      <button
+                        type="button"
+                        className="autodraw-link-btn autodraw-link-btn--inline"
+                        onClick={() => setProcessTraceOpen(false)}
+                      >
+                        {t('dialog.autodraw.processTrace.close')}
+                      </button>
+                    </div>
+
+                    {processTraceStatus === 'error' && (
+                      <div className="autodraw-process-card__empty">
+                        {processTraceError ||
+                          t('dialog.autodraw.processTrace.unavailable')}
+                      </div>
+                    )}
+
+                    {processTraceStatus === 'loading' && (
+                      <div className="autodraw-process-card__empty">
+                        {t('dialog.autodraw.processTrace.loading')}
+                      </div>
+                    )}
+
+                    {processTraceStatus === 'ready' && processTrace && (
+                      <>
+                        <div className="autodraw-process-card__meta">
+                          <span>
+                            {processTrace.pipeline || 'method_to_svg'}
+                          </span>
+                          <span>
+                            {formatProcessTraceValue(
+                              processTrace.settings?.figure_language
+                            )}
+                          </span>
+                          <span>
+                            {formatProcessTraceValue(
+                              processTrace.settings?.provider
+                            )}
+                          </span>
+                        </div>
+
+                        <div className="autodraw-process-stage-list">
+                          {(processTrace.stages || []).map((stage, index) => (
+                            <article
+                              key={stage.id || `${stage.step}-${index}`}
+                              className="autodraw-process-stage"
+                            >
+                              <div className="autodraw-process-stage__rail">
+                                <span>
+                                  {getProcessTraceStepLabel(stage.step)}
+                                </span>
+                              </div>
+                              <div className="autodraw-process-stage__body">
+                                <div className="autodraw-process-stage__top">
+                                  <div>
+                                    <h4>
+                                      {stage.title ||
+                                        t('dialog.autodraw.processTrace.stage')}
+                                    </h4>
+                                    {stage.summary && <p>{stage.summary}</p>}
+                                  </div>
+                                  {stage.status && (
+                                    <span className="autodraw-process-stage__status">
+                                      {stage.status}
+                                    </span>
+                                  )}
+                                </div>
+
+                                {stage.data_flow?.length ? (
+                                  <div className="autodraw-process-flow">
+                                    {stage.data_flow.map((item, flowIndex) => (
+                                      <span
+                                        key={`${stage.id}-flow-${flowIndex}`}
+                                      >
+                                        {item}
+                                      </span>
+                                    ))}
+                                  </div>
+                                ) : null}
+
+                                <div className="autodraw-process-io">
+                                  {stage.inputs && (
+                                    <div>
+                                      <strong>
+                                        {t(
+                                          'dialog.autodraw.processTrace.inputs'
+                                        )}
+                                      </strong>
+                                      {Object.entries(stage.inputs).map(
+                                        ([key, value]) => (
+                                          <p key={key}>
+                                            <span>{key}</span>
+                                            <code>
+                                              {formatProcessTraceValue(value)}
+                                            </code>
+                                          </p>
+                                        )
+                                      )}
+                                    </div>
+                                  )}
+                                  {stage.outputs && (
+                                    <div>
+                                      <strong>
+                                        {t(
+                                          'dialog.autodraw.processTrace.outputs'
+                                        )}
+                                      </strong>
+                                      {Object.entries(stage.outputs).map(
+                                        ([key, value]) => (
+                                          <p key={key}>
+                                            <span>{key}</span>
+                                            <code>
+                                              {formatProcessTraceValue(value)}
+                                            </code>
+                                          </p>
+                                        )
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+
+                                {stage.prompts?.length ? (
+                                  <div className="autodraw-process-prompts">
+                                    {stage.prompts.map(
+                                      (prompt, promptIndex) => (
+                                        <details
+                                          key={`${stage.id}-prompt-${promptIndex}`}
+                                          className="autodraw-process-prompt"
+                                        >
+                                          <summary>
+                                            <span>
+                                              {prompt.title ||
+                                                t(
+                                                  'dialog.autodraw.processTrace.prompt'
+                                                )}
+                                            </span>
+                                            <em>
+                                              {[prompt.provider, prompt.model]
+                                                .filter(Boolean)
+                                                .join(' · ')}
+                                            </em>
+                                          </summary>
+                                          <pre>{prompt.content || '—'}</pre>
+                                        </details>
+                                      )
+                                    )}
+                                  </div>
+                                ) : null}
+                              </div>
+                            </article>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </section>
+                )}
 
                 <div className="autodraw-pipeline-stages">
                   {workbenchStages.map((stage, index) => {

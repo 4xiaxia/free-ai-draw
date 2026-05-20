@@ -15,6 +15,7 @@ KNOWN_ARTIFACT_KINDS = {
     "template.svg": "template_svg",
     "optimized_template.svg": "optimized_template_svg",
     "final.svg": "final_svg",
+    "process_trace.json": "process_trace",
     "run.log": "log",
     "manifest.json": "manifest",
 }

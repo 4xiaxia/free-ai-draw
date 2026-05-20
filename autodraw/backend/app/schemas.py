@@ -10,6 +10,7 @@ Provider = Literal["openrouter", "bianxie", "qingyun", "gemini", "local"]
 SamBackend = Literal["local", "fal", "roboflow", "api"]
 PlaceholderMode = Literal["none", "box", "label"]
 ImageSize = Literal["1K", "2K", "4K"]
+FigureLanguage = Literal["en", "zh"]
 JobStatus = Literal[
     "queued",
     "running",
@@ -23,6 +24,51 @@ ReplayStage = Literal[1, 2, 3, 4, 5]
 JobType = Literal["autodraw", "image-edit"]
 SourceProcessingMode = Literal["segmented", "direct_svg"]
 BackgroundRemovalProvider = Literal["local", "remote", "auto"]
+ClarificationLanguage = Literal["zh", "en"]
+
+
+class ClarificationOption(BaseModel):
+    id: str
+    label: str
+    description: Optional[str] = None
+
+
+class ClarificationQuestion(BaseModel):
+    id: str
+    title: str
+    options: list[ClarificationOption] = Field(default_factory=list)
+    recommended_option_id: Optional[str] = None
+
+
+class ClarificationAnswer(BaseModel):
+    question_id: str
+    option_id: str
+    label: Optional[str] = None
+    description: Optional[str] = None
+
+
+class ClarificationContext(BaseModel):
+    questions: list[ClarificationQuestion] = Field(default_factory=list)
+    answers: list[ClarificationAnswer] = Field(default_factory=list)
+    context_summary: Optional[str] = None
+
+
+class ClarifyJobRequest(BaseModel):
+    method_text: str
+    provider: Provider = "bianxie"
+    api_key: Optional[str] = None
+    base_url: Optional[str] = None
+    ca_api_key: Optional[str] = None
+    ca_base_url: Optional[str] = None
+    ca_model: Optional[str] = None
+    ca_language: ClarificationLanguage = "zh"
+    image_model: Optional[str] = None
+    svg_model: Optional[str] = None
+
+
+class ClarifyJobResponse(BaseModel):
+    questions: list[ClarificationQuestion]
+    context_summary: str
 
 
 class CreateJobRequest(BaseModel):
@@ -33,6 +79,7 @@ class CreateJobRequest(BaseModel):
     base_url: Optional[str] = None
     image_model: Optional[str] = None
     image_size: ImageSize = "4K"
+    figure_language: FigureLanguage = "en"
     svg_model: Optional[str] = None
     sam_prompt: str = "icon,person,robot,animal,CurvedArrow"
     min_score: float = 0.0
@@ -55,6 +102,7 @@ class CreateJobRequest(BaseModel):
     prompt: Optional[str] = None
     source_image_path: Optional[str] = None
     remove_background: bool = False
+    ca_context: Optional[ClarificationContext] = None
 
     @model_validator(mode="after")
     def validate_payload(self) -> "CreateJobRequest":

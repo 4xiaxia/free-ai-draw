@@ -75,6 +75,7 @@ import re
 import shutil
 import sys
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, List, Dict, Any, Literal, Callable
 from urllib.parse import urlparse
@@ -259,9 +260,12 @@ PROVIDER_CONFIGS = {
 ProviderType = Literal["openrouter", "bianxie", "qingyun", "gemini", "local"]
 PlaceholderMode = Literal["none", "box", "label"]
 BackgroundRemovalProvider = Literal["local", "remote", "auto"]
+FigureLanguage = Literal["en", "zh"]
+ClarificationLanguage = Literal["zh", "en"]
 GEMINI_DEFAULT_IMAGE_SIZE = "4K"
 IMAGE_SIZE_CHOICES = ("1K", "2K", "4K")
 BOXLIB_NO_ICON_MODE_KEY = "no_icon_mode"
+PROCESS_TRACE_FILENAME = "process_trace.json"
 
 # SAM3 API config
 SAM3_FAL_API_URL = os.environ.get("SAM3_API_URL") or os.environ.get(
@@ -289,18 +293,52 @@ def _get_env_override(name: str) -> Optional[str]:
     return value or None
 
 
-def _get_provider_model_override(provider: ProviderType, model_kind: Literal["image", "svg"]) -> Optional[str]:
+def _get_provider_ca_api_key(
+    provider: ProviderType,
+    ca_api_key: Optional[str],
+    fallback_api_key: Optional[str],
+) -> Optional[str]:
+    if ca_api_key:
+        return ca_api_key
+    provider_key = provider.upper()
+    for name in (f"{provider_key}_CA_API_KEY", "DEFAULT_CA_API_KEY"):
+        value = _get_env_override(name)
+        if value:
+            return value
+    return _get_provider_api_key(provider, fallback_api_key)
+
+
+def _get_provider_model_override(
+    provider: ProviderType, model_kind: Literal["image", "svg", "ca"]
+) -> Optional[str]:
     provider_key = provider.upper()
     if model_kind == "image":
         candidates = [f"{provider_key}_IMAGE_MODEL", "DEFAULT_IMAGE_MODEL"]
-    else:
+    elif model_kind == "svg":
         candidates = [f"{provider_key}_SVG_MODEL", "DEFAULT_SVG_MODEL"]
+    else:
+        candidates = [f"{provider_key}_CA_MODEL", "DEFAULT_CA_MODEL"]
 
     for name in candidates:
         value = _get_env_override(name)
         if value:
             return value
     return None
+
+
+def _get_provider_ca_base_url(
+    provider: ProviderType,
+    ca_base_url: Optional[str],
+    fallback_base_url: Optional[str],
+) -> Optional[str]:
+    if ca_base_url:
+        return ca_base_url
+    provider_key = provider.upper()
+    for name in (f"{provider_key}_CA_BASE_URL", "DEFAULT_CA_BASE_URL"):
+        value = _get_env_override(name)
+        if value:
+            return value
+    return fallback_base_url
 
 
 # ============================================================================
@@ -369,6 +407,588 @@ def call_llm_text(
         temperature,
         provider_name=provider_name,
     )
+
+
+def _extract_json_object(text: str) -> dict[str, Any]:
+    content = text.strip()
+    fenced_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", content, re.DOTALL)
+    if fenced_match:
+        content = fenced_match.group(1).strip()
+    else:
+        start = content.find("{")
+        end = content.rfind("}")
+        if start >= 0 and end > start:
+            content = content[start : end + 1]
+    parsed = json.loads(content)
+    if not isinstance(parsed, dict):
+        raise ValueError("Clarification model response must be a JSON object")
+    return parsed
+
+
+def _build_default_core_intent_questions(
+    ca_language: ClarificationLanguage = "zh",
+) -> list[dict[str, Any]]:
+    english_questions = [
+        {
+            "id": "q_visual_structure",
+            "title": "Which visual structure should lead the figure?",
+            "recommended_option_id": "process_flow",
+            "options": [
+                {
+                    "id": "process_flow",
+                    "label": "Process flow",
+                    "description": "Use a clear flowchart-like structure from start to finish.",
+                },
+                {
+                    "id": "layered_structure",
+                    "label": "Layered structure",
+                    "description": "Stack the method into conceptual or technical layers.",
+                },
+                {
+                    "id": "module_relationships",
+                    "label": "Module relationships",
+                    "description": "Emphasize entities, modules, components, and their connections.",
+                },
+                {
+                    "id": "comparative_structure",
+                    "label": "Comparative structure",
+                    "description": "Use parallel lanes to compare inputs, methods, or outcomes.",
+                },
+            ],
+        },
+        {
+            "id": "q_expression_focus",
+            "title": "What should the figure emphasize most?",
+            "recommended_option_id": "algorithm_flow",
+            "options": [
+                {
+                    "id": "algorithm_flow",
+                    "label": "Algorithm flow",
+                    "description": "Highlight computational steps and decision logic.",
+                },
+                {
+                    "id": "experiment_pipeline",
+                    "label": "Experiment pipeline",
+                    "description": "Show the experimental procedure from data to evaluation.",
+                },
+                {
+                    "id": "input_output",
+                    "label": "Input and output",
+                    "description": "Make inputs, transformations, and final outputs easy to scan.",
+                },
+                {
+                    "id": "key_modules_data_flow",
+                    "label": "Key modules and data flow",
+                    "description": "Focus on critical modules and how data moves between them.",
+                },
+            ],
+        },
+        {
+            "id": "q_academic_style",
+            "title": "Which academic figure style is closest?",
+            "recommended_option_id": "method_framework",
+            "options": [
+                {
+                    "id": "journal_illustration",
+                    "label": "Paper illustration",
+                    "description": "Use a polished journal-figure look with restrained details.",
+                },
+                {
+                    "id": "system_architecture",
+                    "label": "System architecture",
+                    "description": "Present components as a technical architecture diagram.",
+                },
+                {
+                    "id": "method_framework",
+                    "label": "Method framework",
+                    "description": "Show the proposed method as a coherent framework.",
+                },
+                {
+                    "id": "minimal_schematic",
+                    "label": "Simple schematic",
+                    "description": "Keep only the essential shapes, labels, and arrows.",
+                },
+            ],
+        },
+        {
+            "id": "q_information_density",
+            "title": "How much information should be visible?",
+            "recommended_option_id": "balanced_detail",
+            "options": [
+                {
+                    "id": "concise_overview",
+                    "label": "Concise overview",
+                    "description": "Prioritize high-level readability over fine detail.",
+                },
+                {
+                    "id": "balanced_detail",
+                    "label": "Balanced detail",
+                    "description": "Include enough detail to explain the method without crowding.",
+                },
+                {
+                    "id": "rich_detail",
+                    "label": "Detail-rich",
+                    "description": "Expose intermediate steps, labels, and annotations.",
+                },
+                {
+                    "id": "multi_module_expansion",
+                    "label": "Multi-module expansion",
+                    "description": "Expand multiple branches or modules in the same figure.",
+                },
+            ],
+        },
+        {
+            "id": "q_layout_direction",
+            "title": "Which layout direction should organize the canvas?",
+            "recommended_option_id": "horizontal_pipeline",
+            "options": [
+                {
+                    "id": "horizontal_pipeline",
+                    "label": "Horizontal flow",
+                    "description": "Arrange stages from left to right.",
+                },
+                {
+                    "id": "vertical_hierarchy",
+                    "label": "Vertical hierarchy",
+                    "description": "Use top-to-bottom layers or stages.",
+                },
+                {
+                    "id": "central_radial",
+                    "label": "Central radial",
+                    "description": "Put the core method at the center with surrounding branches.",
+                },
+                {
+                    "id": "left_right_comparison",
+                    "label": "Left-right comparison",
+                    "description": "Compare two sides, modes, baselines, or pathways.",
+                },
+            ],
+        },
+    ]
+    if ca_language == "en":
+        return english_questions
+    return [
+        {
+            "id": "q_visual_structure",
+            "title": "这张图优先采用哪种视觉结构？",
+            "recommended_option_id": "process_flow",
+            "options": [
+                {
+                    "id": "process_flow",
+                    "label": "流程图",
+                    "description": "用清晰的起点到终点流程表达方法步骤。",
+                },
+                {
+                    "id": "layered_structure",
+                    "label": "分层结构",
+                    "description": "把方法拆成概念层、模型层或系统层。",
+                },
+                {
+                    "id": "module_relationships",
+                    "label": "模块关系",
+                    "description": "强调实体、模块、组件以及它们之间的连接。",
+                },
+                {
+                    "id": "comparative_structure",
+                    "label": "对比结构",
+                    "description": "用并列路径比较输入、方法、结果或基线。",
+                },
+            ],
+        },
+        {
+            "id": "q_expression_focus",
+            "title": "这张图最应该突出什么表达重点？",
+            "recommended_option_id": "algorithm_flow",
+            "options": [
+                {
+                    "id": "algorithm_flow",
+                    "label": "算法流程",
+                    "description": "突出计算步骤、决策逻辑和关键操作。",
+                },
+                {
+                    "id": "experiment_pipeline",
+                    "label": "实验管线",
+                    "description": "展示从数据到评估的实验流程。",
+                },
+                {
+                    "id": "input_output",
+                    "label": "输入输出",
+                    "description": "让输入、转换过程和最终输出更易扫读。",
+                },
+                {
+                    "id": "key_modules_data_flow",
+                    "label": "关键模块与数据流",
+                    "description": "突出核心模块以及数据在模块之间的流动。",
+                },
+            ],
+        },
+        {
+            "id": "q_academic_style",
+            "title": "更接近哪种学术图风格？",
+            "recommended_option_id": "method_framework",
+            "options": [
+                {
+                    "id": "journal_illustration",
+                    "label": "论文插图",
+                    "description": "使用精致但克制的期刊插图风格。",
+                },
+                {
+                    "id": "system_architecture",
+                    "label": "系统架构图",
+                    "description": "把组件呈现为技术架构关系。",
+                },
+                {
+                    "id": "method_framework",
+                    "label": "方法框架图",
+                    "description": "把提出的方法组织成完整框架。",
+                },
+                {
+                    "id": "minimal_schematic",
+                    "label": "简洁示意图",
+                    "description": "只保留必要形状、标签和箭头。",
+                },
+            ],
+        },
+        {
+            "id": "q_information_density",
+            "title": "图中信息密度应该如何控制？",
+            "recommended_option_id": "balanced_detail",
+            "options": [
+                {
+                    "id": "concise_overview",
+                    "label": "简洁概览",
+                    "description": "优先保证整体可读性，减少细节。",
+                },
+                {
+                    "id": "balanced_detail",
+                    "label": "细节适中",
+                    "description": "包含足够解释方法的细节，但避免拥挤。",
+                },
+                {
+                    "id": "rich_detail",
+                    "label": "细节充足",
+                    "description": "展示中间步骤、标签和必要注释。",
+                },
+                {
+                    "id": "multi_module_expansion",
+                    "label": "多模块展开",
+                    "description": "在同一张图中展开多个分支或模块。",
+                },
+            ],
+        },
+        {
+            "id": "q_layout_direction",
+            "title": "画布版式方向应该如何组织？",
+            "recommended_option_id": "horizontal_pipeline",
+            "options": [
+                {
+                    "id": "horizontal_pipeline",
+                    "label": "横向流程",
+                    "description": "从左到右排列阶段。",
+                },
+                {
+                    "id": "vertical_hierarchy",
+                    "label": "纵向层级",
+                    "description": "使用自上而下的层次或阶段。",
+                },
+                {
+                    "id": "central_radial",
+                    "label": "中心辐射",
+                    "description": "把核心方法放在中心，周围展开分支。",
+                },
+                {
+                    "id": "left_right_comparison",
+                    "label": "左右对比",
+                    "description": "比较两侧模式、基线、路径或结果。",
+                },
+            ],
+        },
+    ]
+
+
+def _ensure_core_intent_questions(
+    questions: list[dict[str, Any]],
+    ca_language: ClarificationLanguage = "zh",
+) -> list[dict[str, Any]]:
+    default_questions = _build_default_core_intent_questions(ca_language)
+    dimension_keywords = {
+        "q_visual_structure": (
+            "visual structure",
+            "structure",
+            "flowchart",
+            "layered",
+            "module relationship",
+            "流程图",
+            "分层",
+            "模块关系",
+            "对比结构",
+            "视觉结构",
+        ),
+        "q_expression_focus": (
+            "emphasize",
+            "focus",
+            "algorithm",
+            "pipeline",
+            "input",
+            "output",
+            "data flow",
+            "表达重点",
+            "算法流程",
+            "实验管线",
+            "输入",
+            "输出",
+            "数据流",
+            "关键模块",
+        ),
+        "q_academic_style": (
+            "style",
+            "academic",
+            "journal",
+            "architecture",
+            "framework",
+            "schematic",
+            "学术风格",
+            "论文插图",
+            "系统架构",
+            "方法框架",
+            "简洁示意",
+        ),
+        "q_information_density": (
+            "density",
+            "detail",
+            "overview",
+            "multi-module",
+            "information",
+            "信息密度",
+            "简洁概览",
+            "细节",
+            "多模块",
+        ),
+        "q_layout_direction": (
+            "layout",
+            "direction",
+            "horizontal",
+            "vertical",
+            "radial",
+            "left-right",
+            "版式",
+            "横向",
+            "纵向",
+            "中心辐射",
+            "左右对比",
+        ),
+    }
+
+    def question_text(question: dict[str, Any]) -> str:
+        title = str(question.get("title") or "")
+        option_text = " ".join(
+            str(option.get("label") or "") + " " + str(option.get("description") or "")
+            for option in question.get("options", [])
+            if isinstance(option, dict)
+        )
+        return f"{title} {option_text}".lower()
+
+    covered_text = "\n".join(question_text(question) for question in questions)
+    next_questions = list(questions)
+    for default_question in default_questions:
+        if len(next_questions) >= 5:
+            break
+        keywords = dimension_keywords[default_question["id"]]
+        if any(keyword.lower() in covered_text for keyword in keywords):
+            continue
+        next_questions.append(default_question)
+        covered_text += "\n" + question_text(default_question)
+
+    if len(next_questions) < 5:
+        existing_ids = {str(question.get("id")) for question in next_questions}
+        for default_question in default_questions:
+            if len(next_questions) >= 5:
+                break
+            if default_question["id"] in existing_ids:
+                continue
+            next_questions.append(default_question)
+            existing_ids.add(default_question["id"])
+
+    return next_questions[:5]
+
+
+def _normalize_clarification_payload(
+    payload: dict[str, Any],
+    ca_language: ClarificationLanguage = "zh",
+) -> dict[str, Any]:
+    raw_questions = payload.get("questions")
+    if not isinstance(raw_questions, list):
+        raise ValueError("Clarification response missing questions")
+
+    questions: list[dict[str, Any]] = []
+    for question_index, raw_question in enumerate(raw_questions[:5], start=1):
+        if not isinstance(raw_question, dict):
+            continue
+        title = str(raw_question.get("title") or "").strip()
+        raw_options = raw_question.get("options")
+        if not title or not isinstance(raw_options, list):
+            continue
+
+        options: list[dict[str, str]] = []
+        for option_index, raw_option in enumerate(raw_options[:4], start=1):
+            if not isinstance(raw_option, dict):
+                continue
+            label = str(raw_option.get("label") or "").strip()
+            if not label:
+                continue
+            option_id = str(raw_option.get("id") or f"o{option_index}").strip()
+            description = str(raw_option.get("description") or "").strip()
+            options.append(
+                {
+                    "id": option_id,
+                    "label": label,
+                    "description": description,
+                }
+            )
+
+        if len(options) < 2:
+            continue
+
+        question_id = str(raw_question.get("id") or f"q{question_index}").strip()
+        recommended_option_id = str(
+            raw_question.get("recommended_option_id") or options[0]["id"]
+        ).strip()
+        if recommended_option_id not in {option["id"] for option in options}:
+            recommended_option_id = options[0]["id"]
+        questions.append(
+            {
+                "id": question_id,
+                "title": title,
+                "options": options,
+                "recommended_option_id": recommended_option_id,
+            }
+        )
+
+    if not questions:
+        raise ValueError("Clarification response did not contain usable questions")
+    questions = _ensure_core_intent_questions(questions, ca_language)
+
+    context_summary = str(payload.get("context_summary") or "").strip()
+    if not context_summary:
+        if ca_language == "zh":
+            context_summary = "通过这些选择明确图示的视觉结构、表达重点、学术风格、信息密度和版式方向。"
+        else:
+            context_summary = "Use the selected choices to clarify visual style, layout, audience, and emphasis before generating the figure."
+
+    return {"questions": questions, "context_summary": context_summary}
+
+
+def _build_fallback_clarification_payload(
+    reason: str | None = None,
+    ca_language: ClarificationLanguage = "zh",
+) -> dict[str, Any]:
+    if reason:
+        print(f"[warn] CA intent selection fallback: {reason}")
+    return {
+        "questions": _build_default_core_intent_questions(ca_language),
+        "context_summary": (
+            "请从视觉结构、表达重点、学术风格、信息密度和版式方向确认生成意图。"
+            if ca_language == "zh"
+            else "Choose the figure direction across visual structure, expression focus, "
+            "academic style, information density, and layout."
+        ),
+    }
+
+
+def generate_clarification_questions(
+    method_text: str,
+    api_key: str | None,
+    base_url: str | None,
+    provider: ProviderType,
+    ca_api_key: str | None = None,
+    ca_base_url: str | None = None,
+    ca_model: str | None = None,
+    ca_language: ClarificationLanguage = "zh",
+    image_model: str | None = None,
+    svg_model: str | None = None,
+) -> dict[str, Any]:
+    resolved_api_key = _get_provider_ca_api_key(provider, ca_api_key, api_key)
+    if not resolved_api_key:
+        raise ValueError("必须提供 api_key")
+
+    config = PROVIDER_CONFIGS[provider]
+    resolved_base_url = (
+        _get_provider_ca_base_url(provider, ca_base_url, base_url)
+        or config["base_url"]
+    )
+    model = (
+        ca_model
+        or _get_provider_model_override(provider, "ca")
+        or svg_model
+        or image_model
+        or config["default_svg_model"]
+    )
+    output_language = (
+        "Simplified Chinese" if ca_language == "zh" else "English"
+    )
+    prompt = f"""You are the Clarification Agent for an academic figure generator.
+
+Read the user's method description and produce 3 to 5 concise intent-selection prompts that will help the image generation model choose a better visual direction before drawing.
+
+Rules:
+- Ask only questions that materially affect the generated figure.
+- Prioritize these five dimensions: visual structure, expression focus, academic style, information density, and layout direction.
+- Visual structure options should cover choices like flowchart, layered structure, module relationships, and comparative structure.
+- Expression focus options should cover choices like algorithm flow, experiment pipeline, input/output, key modules, and data flow.
+- Academic style options should cover choices like paper illustration, system architecture, method framework, and simple schematic.
+- Information density options should cover choices like concise overview, balanced detail, detail-rich, and multi-module expansion.
+- Layout direction options should cover choices like horizontal flow, vertical hierarchy, central radial, and left-right comparison.
+- Entity/module relationship should appear as one possible choice within the visual structure or expression focus dimension, not as the dominant first priority.
+- Each question must have 2 to 4 options.
+- Include one recommended option per question.
+- Keep labels short and descriptions concrete.
+- Do not ask for secrets, account data, or deployment details.
+- Return strictly valid JSON only. Do not include markdown fences, comments, trailing commas, unescaped quotes, or prose outside the JSON object.
+- Every string value must be a single JSON string with any internal quotes escaped.
+- Use stable ids in snake_case.
+- Output language: {output_language}. The context_summary, question titles, option labels, and option descriptions must all be written in {output_language}.
+- Return JSON with this exact shape:
+{{
+  "context_summary": "one short sentence describing the visual direction to resolve",
+  "questions": [
+    {{
+      "id": "q1",
+      "title": "question text",
+      "recommended_option_id": "a",
+      "options": [
+        {{"id": "a", "label": "option label", "description": "what this changes"}},
+        {{"id": "b", "label": "option label", "description": "what this changes"}}
+      ]
+    }}
+  ]
+}}
+
+Method description:
+\"\"\"
+{method_text}
+\"\"\""""
+
+    response_text = call_llm_text(
+        prompt=prompt,
+        api_key=resolved_api_key,
+        model=model,
+        base_url=resolved_base_url,
+        provider=provider,
+        max_tokens=3000,
+        temperature=0.35,
+    )
+    if not response_text:
+        return _build_fallback_clarification_payload(
+            "Clarification model returned no content",
+            ca_language=ca_language,
+        )
+    try:
+        return _normalize_clarification_payload(
+            _extract_json_object(response_text),
+            ca_language=ca_language,
+        )
+    except (json.JSONDecodeError, ValueError) as exc:
+        return _build_fallback_clarification_payload(str(exc), ca_language=ca_language)
 
 
 def call_llm_multimodal(
@@ -1686,6 +2306,124 @@ def _call_qingyun_gemini_native_image_generation(
 # 步骤一：调用 LLM 生成图片
 # ============================================================================
 
+def _format_ca_context_for_prompt(ca_context: Any | None) -> str:
+    if not isinstance(ca_context, dict):
+        return ""
+
+    lines: list[str] = []
+    summary = str(ca_context.get("context_summary") or "").strip()
+    if summary:
+        lines.append(f"- Clarification summary: {summary}")
+
+    raw_answers = ca_context.get("answers")
+    if isinstance(raw_answers, list):
+        for answer in raw_answers:
+            if not isinstance(answer, dict):
+                continue
+            label = str(answer.get("label") or answer.get("option_id") or "").strip()
+            description = str(answer.get("description") or "").strip()
+            if not label:
+                continue
+            if description:
+                lines.append(f"- Selected direction: {label} — {description}")
+            else:
+                lines.append(f"- Selected direction: {label}")
+
+    if not lines:
+        return ""
+    return "\n".join(lines)
+
+
+def _build_figure_language_instruction(figure_language: FigureLanguage) -> str:
+    if figure_language == "zh":
+        return """Language mode: Chinese figure.
+This is a hard requirement for visible text and overrides the language of the method description and intent selections.
+- Use Simplified Chinese for all visible labels, titles, notes, legends, axis labels, captions, and callouts in the generated image.
+- Translate or rewrite visual labels into concise Simplified Chinese; do not copy English sentences from the method unless they are essential acronyms, symbols, equations, or established method names.
+- Choose a Chinese-capable academic typography style so Chinese glyphs render naturally and do not fall back to garbled or mismatched fonts.
+- Keep the figure professional and readable; avoid mixing English labels unless an acronym or method name is essential."""
+
+    return """Language mode: English figure.
+This is a hard requirement for visible text and overrides the language of the method description and intent selections.
+- Use English for all visible labels, titles, notes, legends, axis labels, captions, and callouts in the generated image.
+- If the method description or intent selections contain Chinese or any non-English wording, translate the meaning into concise English labels before drawing.
+- Do not render Chinese characters in the figure unless they are part of an unavoidable proper noun supplied by the user.
+- Keep labels short, academic, and readable."""
+
+
+def _trace_json_safe(value: Any) -> Any:
+    if isinstance(value, Path):
+        return value.as_posix()
+    if isinstance(value, dict):
+        return {str(key): _trace_json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_trace_json_safe(item) for item in value]
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return value
+    return str(value)
+
+
+def _trace_rel_path(path: Path, root: Path) -> str:
+    try:
+        return path.relative_to(root).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def _write_process_trace(output_dir: Path, trace: dict[str, Any]) -> None:
+    trace["updated_at"] = datetime.now(timezone.utc).isoformat()
+    trace_path = output_dir / PROCESS_TRACE_FILENAME
+    trace_path.write_text(
+        json.dumps(_trace_json_safe(trace), ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
+def _upsert_trace_stage(
+    trace: dict[str, Any],
+    *,
+    stage_id: str,
+    step: int | str,
+    title: str,
+    summary: str,
+    status: str,
+    inputs: dict[str, Any] | None = None,
+    outputs: dict[str, Any] | None = None,
+    prompts: list[dict[str, Any]] | None = None,
+    data_flow: list[str] | None = None,
+) -> dict[str, Any]:
+    stages = trace.setdefault("stages", [])
+    stage = next(
+        (
+            item
+            for item in stages
+            if isinstance(item, dict) and item.get("id") == stage_id
+        ),
+        None,
+    )
+    if stage is None:
+        stage = {"id": stage_id, "step": step, "title": title}
+        stages.append(stage)
+
+    stage.update(
+        {
+            "step": step,
+            "title": title,
+            "summary": summary,
+            "status": status,
+        }
+    )
+    if inputs is not None:
+        stage["inputs"] = inputs
+    if outputs is not None:
+        stage["outputs"] = outputs
+    if prompts is not None:
+        stage["prompts"] = prompts
+    if data_flow is not None:
+        stage["data_flow"] = data_flow
+    return stage
+
+
 def generate_figure_from_method(
     method_text: str,
     output_path: str,
@@ -1696,6 +2434,9 @@ def generate_figure_from_method(
     use_reference_image: Optional[bool] = None,
     reference_image_path: Optional[str] = None,
     image_size: str = GEMINI_DEFAULT_IMAGE_SIZE,
+    figure_language: FigureLanguage = "en",
+    ca_context: Any | None = None,
+    prompt_recorder: Optional[Callable[[str], None]] = None,
 ) -> str:
     """
     使用 LLM 生成学术风格图片
@@ -1735,6 +2476,10 @@ def generate_figure_from_method(
         reference_image = Image.open(reference_image_path)
         print(f"参考图片: {reference_image_path}")
 
+    ca_prompt_context = _format_ca_context_for_prompt(ca_context)
+    if ca_prompt_context:
+        print("[meta] ca_context=enabled")
+
     if use_reference_image:
         prompt = f"""Generate a figure to visualize the method described below.
 
@@ -1765,6 +2510,23 @@ Below is the method section of the paper:
 {method_text}
 
 The figure should be engaging and using academic journal style with cute characters."""
+
+    if ca_prompt_context:
+        prompt += f"""
+
+Before generating the image, follow these user-confirmed intent selections:
+{ca_prompt_context}
+
+Treat these choices as visual and communication constraints for the first generated figure."""
+
+    prompt += f"""
+
+{_build_figure_language_instruction(figure_language)}
+
+Do not let the source text language override this language mode."""
+
+    if prompt_recorder:
+        prompt_recorder(prompt)
 
     print(f"发送请求到: {base_url}")
 
@@ -3107,6 +3869,7 @@ def generate_svg_template(
     provider: ProviderType,
     placeholder_mode: PlaceholderMode = "label",
     no_icon_mode: bool = False,
+    prompt_recorder: Optional[Callable[[str], None]] = None,
 ) -> str:
     """
     使用多模态 LLM 生成 SVG 代码
@@ -3214,6 +3977,9 @@ Please output ONLY the SVG code, starting with <svg and ending with </svg>. Do n
     elif not no_icon_mode:  # none 模式
         prompt_text = base_prompt + """
 Please output ONLY the SVG code, starting with <svg and ending with </svg>. Do not include any explanation or markdown formatting."""
+
+    if prompt_recorder:
+        prompt_recorder(prompt_text)
 
     if not no_icon_mode and placeholder_mode == "label":
         contents = [prompt_text, figure_prompt_img]
@@ -3762,6 +4528,7 @@ def optimize_svg_with_llm(
     max_iterations: int = 2,
     skip_base64_validation: bool = False,
     no_icon_mode: bool = False,
+    prompt_recorder: Optional[Callable[[str, int], None]] = None,
 ) -> str:
     """
     使用 LLM 优化 SVG，使其与原图更加对齐
@@ -3903,6 +4670,9 @@ Please carefully compare and check the following **TWO MAJOR ASPECTS with EIGHT 
 - Keep all icon placeholder structures intact (the <g> elements with id like "AF01")
 - Focus on position and style corrections"""
 
+        if prompt_recorder:
+            prompt_recorder(prompt, iteration + 1)
+
         contents = [prompt, figure_prompt_img, samed_prompt_img, current_prompt_img]
 
         try:
@@ -4001,7 +4771,9 @@ def method_to_svg(
     optimize_iterations: int = 2,
     merge_threshold: float = 0.9,
     image_size: str = GEMINI_DEFAULT_IMAGE_SIZE,
+    figure_language: FigureLanguage = "en",
     start_stage: int = 1,
+    ca_context: Any | None = None,
     cancellation_check: Optional[Callable[[int, str], None]] = None,
 ) -> dict:
     """
@@ -4049,6 +4821,28 @@ def method_to_svg(
 
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+    trace: dict[str, Any] = {
+        "schema_version": 1,
+        "title": "AutoDraw generation process",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "pipeline": "method_to_svg",
+        "settings": {
+            "provider": provider,
+            "image_model": image_gen_model,
+            "svg_model": svg_gen_model,
+            "sam_prompts": sam_prompts,
+            "sam_backend": "fal" if sam_backend == "api" else sam_backend,
+            "placeholder_mode": placeholder_mode,
+            "figure_language": figure_language,
+            "image_size": image_size,
+            "start_stage": start_stage,
+            "stop_after": stop_after,
+            "remove_background": remove_background,
+            "optimize_iterations": optimize_iterations,
+            "merge_threshold": merge_threshold,
+        },
+        "stages": [],
+    }
 
     print("\n" + "=" * 60)
     print("Paper Method 到 SVG 图标替换流程 (Label 模式增强版 + Box合并)")
@@ -4087,13 +4881,101 @@ def method_to_svg(
     optimized_template_path = output_dir / "optimized_template.svg"
     final_svg_path = output_dir / "final.svg"
 
+    if ca_context:
+        _upsert_trace_stage(
+            trace,
+            stage_id="intent_selection",
+            step="CA",
+            title="Intent selection context",
+            summary="User-confirmed intent choices are attached before image generation.",
+            status="ready",
+            inputs={"method_text": method_text},
+            outputs={"ca_context": ca_context},
+            data_flow=[
+                "method_text",
+                "intent selection answers",
+                "ca_context passed to stage 1 image prompt",
+            ],
+        )
+    else:
+        _upsert_trace_stage(
+            trace,
+            stage_id="intent_selection",
+            step="CA",
+            title="Intent selection context",
+            summary="Intent selection was skipped or unavailable.",
+            status="skipped",
+            inputs={"method_text": method_text},
+            outputs={"ca_context": None},
+            data_flow=["method_text", "stage 1 image prompt"],
+        )
+    _write_process_trace(output_dir, trace)
+
     def check_cancellation(stage: int, label: str) -> None:
         if cancellation_check:
             cancellation_check(stage, label)
 
+    def add_trace_prompt(stage_id: str, prompt_payload: dict[str, Any]) -> None:
+        stage = next(
+            (
+                item
+                for item in trace.get("stages", [])
+                if isinstance(item, dict) and item.get("id") == stage_id
+            ),
+            None,
+        )
+        if stage is None:
+            return
+        prompts = stage.setdefault("prompts", [])
+        if isinstance(prompts, list):
+            prompts.append(prompt_payload)
+        _write_process_trace(output_dir, trace)
+
     # 步骤一：生成图片
     if start_stage <= 1:
         check_cancellation(1, "步骤一：生成图片")
+        _upsert_trace_stage(
+            trace,
+            stage_id="stage_1_image_generation",
+            step=1,
+            title="Generate raster figure",
+            summary="Convert the method description and confirmed intent into the first academic figure image.",
+            status="running",
+            inputs={
+                "method_text": method_text,
+                "ca_context_enabled": bool(ca_context),
+                "figure_language": figure_language,
+                "image_size": image_size,
+                "model": image_gen_model,
+            },
+            outputs={"figure_path": _trace_rel_path(figure_path, output_dir)},
+            data_flow=[
+                "method_text + ca_context",
+                "stage 1 image generation prompt",
+                "figure.png",
+            ],
+        )
+        _write_process_trace(output_dir, trace)
+
+        def record_stage_1_prompt(prompt: str) -> None:
+            _upsert_trace_stage(
+                trace,
+                stage_id="stage_1_image_generation",
+                step=1,
+                title="Generate raster figure",
+                summary="Convert the method description and confirmed intent into the first academic figure image.",
+                status="running",
+                prompts=[
+                    {
+                        "title": "Image generation prompt",
+                        "model": image_gen_model,
+                        "provider": provider,
+                        "content": prompt,
+                    }
+                ],
+            )
+            _write_process_trace(output_dir, trace)
+
         try:
             generate_figure_from_method(
                 method_text=method_text,
@@ -4103,17 +4985,56 @@ def method_to_svg(
                 base_url=base_url,
                 provider=provider,
                 image_size=image_size,
+                figure_language=figure_language,
+                ca_context=ca_context,
+                prompt_recorder=record_stage_1_prompt,
             )
+            _upsert_trace_stage(
+                trace,
+                stage_id="stage_1_image_generation",
+                step=1,
+                title="Generate raster figure",
+                summary="Convert the method description and confirmed intent into the first academic figure image.",
+                status="completed",
+                outputs={"figure_path": _trace_rel_path(figure_path, output_dir)},
+            )
+            _write_process_trace(output_dir, trace)
         except Exception as exc:
+            _upsert_trace_stage(
+                trace,
+                stage_id="stage_1_image_generation",
+                step=1,
+                title="Generate raster figure",
+                summary="Convert the method description and confirmed intent into the first academic figure image.",
+                status="failed",
+                outputs={
+                    "figure_path": _trace_rel_path(figure_path, output_dir),
+                    "error": str(exc),
+                },
+            )
+            _write_process_trace(output_dir, trace)
             raise PipelineStageError(1, str(exc)) from exc
     else:
         _require_existing_file(figure_path, start_stage, "figure.png")
         print(f"[resume] 跳过步骤 1，复用 {figure_path}")
+        _upsert_trace_stage(
+            trace,
+            stage_id="stage_1_image_generation",
+            step=1,
+            title="Generate raster figure",
+            summary="Reused the existing raster figure from a previous run.",
+            status="reused",
+            inputs={"start_stage": start_stage},
+            outputs={"figure_path": _trace_rel_path(figure_path, output_dir)},
+            data_flow=["existing figure.png", "stage 2 segmentation"],
+        )
+        _write_process_trace(output_dir, trace)
 
     if stop_after == 1:
         print("\n" + "=" * 60)
         print("已在步骤 1 后停止")
         print("=" * 60)
+        _write_process_trace(output_dir, trace)
         return {
             "figure_path": str(figure_path),
             "samed_path": None,
@@ -4127,6 +5048,28 @@ def method_to_svg(
     # 步骤二：SAM3 分割（包含Box合并）
     if start_stage <= 2:
         check_cancellation(2, "步骤二：SAM3 分割")
+        _upsert_trace_stage(
+            trace,
+            stage_id="stage_2_segmentation",
+            step=2,
+            title="Segment icon candidates",
+            summary="Run SAM3 prompts on figure.png and produce marked regions plus box metadata.",
+            status="running",
+            inputs={
+                "figure_path": _trace_rel_path(figure_path, output_dir),
+                "sam_prompts": sam_prompts,
+                "sam_backend": sam_backend_value,
+                "min_score": min_score,
+                "merge_threshold": merge_threshold,
+                "sam_max_masks": sam_max_masks,
+            },
+            outputs={
+                "samed_path": _trace_rel_path(samed_path, output_dir),
+                "boxlib_path": _trace_rel_path(boxlib_path, output_dir),
+            },
+            data_flow=["figure.png", "SAM3 text prompts", "samed.png + boxlib.json"],
+        )
+        _write_process_trace(output_dir, trace)
         try:
             samed_path_str, boxlib_path_str, valid_boxes = segment_with_sam3(
                 image_path=str(figure_path),
@@ -4140,13 +5083,53 @@ def method_to_svg(
             )
             samed_path = Path(samed_path_str)
             boxlib_path = Path(boxlib_path_str)
+            _upsert_trace_stage(
+                trace,
+                stage_id="stage_2_segmentation",
+                step=2,
+                title="Segment icon candidates",
+                summary="Run SAM3 prompts on figure.png and produce marked regions plus box metadata.",
+                status="completed",
+                outputs={
+                    "samed_path": _trace_rel_path(samed_path, output_dir),
+                    "boxlib_path": _trace_rel_path(boxlib_path, output_dir),
+                    "valid_box_count": len(valid_boxes),
+                },
+            )
+            _write_process_trace(output_dir, trace)
         except Exception as exc:
+            _upsert_trace_stage(
+                trace,
+                stage_id="stage_2_segmentation",
+                step=2,
+                title="Segment icon candidates",
+                summary="Run SAM3 prompts on figure.png and produce marked regions plus box metadata.",
+                status="failed",
+                outputs={"error": str(exc)},
+            )
+            _write_process_trace(output_dir, trace)
             raise PipelineStageError(2, str(exc)) from exc
     else:
         _require_existing_file(samed_path, start_stage, "samed.png")
         _require_existing_file(boxlib_path, start_stage, "boxlib.json")
         valid_boxes = _load_resume_boxes(boxlib_path)
         print(f"[resume] 跳过步骤 2，复用 {boxlib_path}")
+        _upsert_trace_stage(
+            trace,
+            stage_id="stage_2_segmentation",
+            step=2,
+            title="Segment icon candidates",
+            summary="Reused existing segmentation artifacts.",
+            status="reused",
+            inputs={"figure_path": _trace_rel_path(figure_path, output_dir)},
+            outputs={
+                "samed_path": _trace_rel_path(samed_path, output_dir),
+                "boxlib_path": _trace_rel_path(boxlib_path, output_dir),
+                "valid_box_count": len(valid_boxes),
+            },
+            data_flow=["existing samed.png + boxlib.json", "stage 3 icon crops"],
+        )
+        _write_process_trace(output_dir, trace)
 
     no_icon_mode = len(valid_boxes) == 0
     if no_icon_mode:
@@ -4158,6 +5141,7 @@ def method_to_svg(
         print("\n" + "=" * 60)
         print("已在步骤 2 后停止")
         print("=" * 60)
+        _write_process_trace(output_dir, trace)
         return {
             "figure_path": str(figure_path),
             "samed_path": str(samed_path),
@@ -4172,6 +5156,24 @@ def method_to_svg(
     icon_infos = []
     if start_stage <= 3:
         check_cancellation(3, "步骤三：裁切与去背景")
+        _upsert_trace_stage(
+            trace,
+            stage_id="stage_3_icon_extraction",
+            step=3,
+            title="Extract icon assets",
+            summary="Crop detected boxes and optionally remove icon backgrounds.",
+            status="skipped" if no_icon_mode else "running",
+            inputs={
+                "figure_path": _trace_rel_path(figure_path, output_dir),
+                "boxlib_path": _trace_rel_path(boxlib_path, output_dir),
+                "remove_background": remove_background,
+                "background_removal_provider": effective_background_removal_provider,
+                "no_icon_mode": no_icon_mode,
+            },
+            outputs={"icons_dir": "icons/", "icon_count": 0},
+            data_flow=["boxlib.json", "cropped icons", "icons/*.png"],
+        )
+        _write_process_trace(output_dir, trace)
         if no_icon_mode:
             print("步骤三跳过：当前为无图标回退模式")
         else:
@@ -4186,7 +5188,30 @@ def method_to_svg(
                     remove_background=remove_background,
                     background_removal_provider=effective_background_removal_provider,
                 )
+                _upsert_trace_stage(
+                    trace,
+                    stage_id="stage_3_icon_extraction",
+                    step=3,
+                    title="Extract icon assets",
+                    summary="Crop detected boxes and optionally remove icon backgrounds.",
+                    status="completed",
+                    outputs={
+                        "icons_dir": "icons/",
+                        "icon_count": len(icon_infos),
+                    },
+                )
+                _write_process_trace(output_dir, trace)
             except Exception as exc:
+                _upsert_trace_stage(
+                    trace,
+                    stage_id="stage_3_icon_extraction",
+                    step=3,
+                    title="Extract icon assets",
+                    summary="Crop detected boxes and optionally remove icon backgrounds.",
+                    status="failed",
+                    outputs={"error": str(exc)},
+                )
+                _write_process_trace(output_dir, trace)
                 raise PipelineStageError(3, str(exc)) from exc
     else:
         if no_icon_mode:
@@ -4196,11 +5221,24 @@ def method_to_svg(
             if not icon_infos:
                 raise PipelineStageError(start_stage, "Resume 失败，缺少 icons 目录或图标文件")
             print(f"[resume] 跳过步骤 3，复用 {len(icon_infos)} 个图标")
+        _upsert_trace_stage(
+            trace,
+            stage_id="stage_3_icon_extraction",
+            step=3,
+            title="Extract icon assets",
+            summary="Reused existing icon assets.",
+            status="skipped" if no_icon_mode else "reused",
+            inputs={"boxlib_path": _trace_rel_path(boxlib_path, output_dir)},
+            outputs={"icons_dir": "icons/", "icon_count": len(icon_infos)},
+            data_flow=["existing icons/*.png", "stage 5 replacement"],
+        )
+        _write_process_trace(output_dir, trace)
 
     if stop_after == 3:
         print("\n" + "=" * 60)
         print("已在步骤 3 后停止")
         print("=" * 60)
+        _write_process_trace(output_dir, trace)
         return {
             "figure_path": str(figure_path),
             "samed_path": str(samed_path),
@@ -4214,6 +5252,61 @@ def method_to_svg(
     # 步骤四：生成 SVG 模板
     if start_stage <= 4:
         check_cancellation(4, "步骤四：生成 SVG 模板")
+        _upsert_trace_stage(
+            trace,
+            stage_id="stage_4_svg_reconstruction",
+            step=4,
+            title="Reconstruct SVG template",
+            summary="Use multimodal SVG prompts to recreate the figure as SVG, then optionally optimize alignment.",
+            status="running",
+            inputs={
+                "figure_path": _trace_rel_path(figure_path, output_dir),
+                "samed_path": _trace_rel_path(samed_path, output_dir),
+                "boxlib_path": _trace_rel_path(boxlib_path, output_dir),
+                "placeholder_mode": placeholder_mode,
+                "no_icon_mode": no_icon_mode,
+                "model": svg_gen_model,
+                "optimize_iterations": optimize_iterations,
+            },
+            outputs={
+                "template_svg_path": _trace_rel_path(template_svg_path, output_dir),
+                "optimized_template_path": _trace_rel_path(
+                    optimized_template_path, output_dir
+                ),
+            },
+            prompts=[],
+            data_flow=[
+                "figure.png + samed.png + boxlib.json",
+                "SVG template prompt",
+                "template.svg",
+                "SVG optimization prompt",
+                "optimized_template.svg",
+            ],
+        )
+        _write_process_trace(output_dir, trace)
+
+        def record_svg_template_prompt(prompt: str) -> None:
+            add_trace_prompt(
+                "stage_4_svg_reconstruction",
+                {
+                    "title": "SVG template reconstruction prompt",
+                    "model": svg_gen_model,
+                    "provider": provider,
+                    "content": prompt,
+                },
+            )
+
+        def record_svg_optimization_prompt(prompt: str, iteration: int) -> None:
+            add_trace_prompt(
+                "stage_4_svg_reconstruction",
+                {
+                    "title": f"SVG optimization prompt · iteration {iteration}",
+                    "model": svg_gen_model,
+                    "provider": provider,
+                    "content": prompt,
+                },
+            )
+
         try:
             generate_svg_template(
                 figure_path=str(figure_path),
@@ -4226,6 +5319,7 @@ def method_to_svg(
                 provider=provider,
                 placeholder_mode=placeholder_mode,
                 no_icon_mode=no_icon_mode,
+                prompt_recorder=record_svg_template_prompt,
             )
 
             optimize_svg_with_llm(
@@ -4240,24 +5334,96 @@ def method_to_svg(
                 max_iterations=optimize_iterations,
                 skip_base64_validation=True,
                 no_icon_mode=no_icon_mode,
+                prompt_recorder=record_svg_optimization_prompt,
             )
+            _upsert_trace_stage(
+                trace,
+                stage_id="stage_4_svg_reconstruction",
+                step=4,
+                title="Reconstruct SVG template",
+                summary="Use multimodal SVG prompts to recreate the figure as SVG, then optionally optimize alignment.",
+                status="completed",
+                outputs={
+                    "template_svg_path": (
+                        _trace_rel_path(template_svg_path, output_dir)
+                        if template_svg_path.is_file()
+                        else None
+                    ),
+                    "optimized_template_path": (
+                        _trace_rel_path(optimized_template_path, output_dir)
+                        if optimized_template_path.is_file()
+                        else None
+                    ),
+                },
+            )
+            _write_process_trace(output_dir, trace)
         except Exception as exc:
             if not no_icon_mode:
+                _upsert_trace_stage(
+                    trace,
+                    stage_id="stage_4_svg_reconstruction",
+                    step=4,
+                    title="Reconstruct SVG template",
+                    summary="Use multimodal SVG prompts to recreate the figure as SVG, then optionally optimize alignment.",
+                    status="failed",
+                    outputs={"error": str(exc)},
+                )
+                _write_process_trace(output_dir, trace)
                 raise PipelineStageError(4, str(exc)) from exc
             print(f"无图标模式下 SVG 重建失败（{exc}），改用内嵌原图的保底 SVG")
             create_embedded_figure_svg(
                 figure_path=str(figure_path),
                 output_path=str(final_svg_path),
             )
+            _upsert_trace_stage(
+                trace,
+                stage_id="stage_4_svg_reconstruction",
+                step=4,
+                title="Reconstruct SVG template",
+                summary="SVG reconstruction failed in no-icon mode; created an embedded-image fallback SVG.",
+                status="fallback",
+                outputs={
+                    "final_svg_path": _trace_rel_path(final_svg_path, output_dir),
+                    "error": str(exc),
+                },
+            )
+            _write_process_trace(output_dir, trace)
     else:
         if not template_svg_path.is_file() and not optimized_template_path.is_file():
             raise PipelineStageError(start_stage, "Resume 失败，缺少 template.svg 或 optimized_template.svg")
         print("[resume] 跳过步骤 4，复用已有 SVG 模板")
+        _upsert_trace_stage(
+            trace,
+            stage_id="stage_4_svg_reconstruction",
+            step=4,
+            title="Reconstruct SVG template",
+            summary="Reused existing SVG template artifacts.",
+            status="reused",
+            inputs={
+                "figure_path": _trace_rel_path(figure_path, output_dir),
+                "samed_path": _trace_rel_path(samed_path, output_dir),
+            },
+            outputs={
+                "template_svg_path": (
+                    _trace_rel_path(template_svg_path, output_dir)
+                    if template_svg_path.is_file()
+                    else None
+                ),
+                "optimized_template_path": (
+                    _trace_rel_path(optimized_template_path, output_dir)
+                    if optimized_template_path.is_file()
+                    else None
+                ),
+            },
+            data_flow=["existing SVG template", "stage 5 icon replacement"],
+        )
+        _write_process_trace(output_dir, trace)
 
     if stop_after == 4:
         print("\n" + "=" * 60)
         print("已在步骤 4 后停止")
         print("=" * 60)
+        _write_process_trace(output_dir, trace)
         return {
             "figure_path": str(figure_path),
             "samed_path": str(samed_path),
@@ -4273,17 +5439,71 @@ def method_to_svg(
     # 步骤五：图标替换
     if start_stage <= 5:
         check_cancellation(5, "步骤五：图标替换")
+        _upsert_trace_stage(
+            trace,
+            stage_id="stage_5_icon_replacement",
+            step=5,
+            title="Replace placeholders and finalize SVG",
+            summary="Align SVG coordinates and replace placeholder boxes with extracted transparent icons.",
+            status="running",
+            inputs={
+                "svg_template_path": _trace_rel_path(
+                    svg_template_for_replace, output_dir
+                ),
+                "icon_count": len(icon_infos),
+                "placeholder_mode": placeholder_mode,
+                "no_icon_mode": no_icon_mode,
+            },
+            outputs={"final_svg_path": _trace_rel_path(final_svg_path, output_dir)},
+            data_flow=[
+                "optimized_template.svg",
+                "icons/*.png",
+                "coordinate scale factors",
+                "final.svg",
+            ],
+        )
+        _write_process_trace(output_dir, trace)
         try:
             if no_icon_mode:
                 if svg_template_for_replace.is_file():
                     shutil.copyfile(svg_template_for_replace, final_svg_path)
                     print("无图标模式：跳过图标替换，直接输出 SVG")
+                    _upsert_trace_stage(
+                        trace,
+                        stage_id="stage_5_icon_replacement",
+                        step=5,
+                        title="Replace placeholders and finalize SVG",
+                        summary="No icon placeholders were available, so the template SVG became the final SVG.",
+                        status="completed",
+                        outputs={
+                            "final_svg_path": _trace_rel_path(
+                                final_svg_path, output_dir
+                            ),
+                            "mode": "no_icon_copy",
+                        },
+                    )
+                    _write_process_trace(output_dir, trace)
                 else:
                     print("无图标模式缺少模板 SVG，生成保底 final.svg")
                     create_embedded_figure_svg(
                         figure_path=str(figure_path),
                         output_path=str(final_svg_path),
                     )
+                    _upsert_trace_stage(
+                        trace,
+                        stage_id="stage_5_icon_replacement",
+                        step=5,
+                        title="Replace placeholders and finalize SVG",
+                        summary="Created an embedded-image fallback final SVG.",
+                        status="fallback",
+                        outputs={
+                            "final_svg_path": _trace_rel_path(
+                                final_svg_path, output_dir
+                            ),
+                            "mode": "embedded_fallback",
+                        },
+                    )
+                    _write_process_trace(output_dir, trace)
             else:
                 print("\n" + "-" * 50)
                 print("步骤 4.7：坐标系对齐")
@@ -4321,11 +5541,48 @@ def method_to_svg(
                     scale_factors=scale_factors,
                     match_by_label=(placeholder_mode == "label"),
                 )
+                _upsert_trace_stage(
+                    trace,
+                    stage_id="stage_5_icon_replacement",
+                    step=5,
+                    title="Replace placeholders and finalize SVG",
+                    summary="Aligned coordinates and inserted extracted icon assets into the final SVG.",
+                    status="completed",
+                    outputs={
+                        "final_svg_path": _trace_rel_path(final_svg_path, output_dir),
+                        "figure_size": [figure_width, figure_height],
+                        "svg_size": [svg_width, svg_height],
+                        "scale_factors": list(scale_factors),
+                    },
+                )
+                _write_process_trace(output_dir, trace)
         except Exception as exc:
+            _upsert_trace_stage(
+                trace,
+                stage_id="stage_5_icon_replacement",
+                step=5,
+                title="Replace placeholders and finalize SVG",
+                summary="Align SVG coordinates and replace placeholder boxes with extracted transparent icons.",
+                status="failed",
+                outputs={"error": str(exc)},
+            )
+            _write_process_trace(output_dir, trace)
             raise PipelineStageError(5, str(exc)) from exc
     else:
         _require_existing_file(final_svg_path, start_stage, "final.svg")
         print("[resume] 跳过步骤 5，复用 final.svg")
+        _upsert_trace_stage(
+            trace,
+            stage_id="stage_5_icon_replacement",
+            step=5,
+            title="Replace placeholders and finalize SVG",
+            summary="Reused existing final.svg.",
+            status="reused",
+            inputs={"start_stage": start_stage},
+            outputs={"final_svg_path": _trace_rel_path(final_svg_path, output_dir)},
+            data_flow=["existing final.svg", "bundle.zip"],
+        )
+        _write_process_trace(output_dir, trace)
 
     print("\n" + "=" * 60)
     print("流程完成！")
@@ -4337,6 +5594,7 @@ def method_to_svg(
     print(f"SVG模板: {template_svg_path}")
     print(f"优化后模板: {optimized_template_path}")
     print(f"最终SVG: {final_svg_path}")
+    _write_process_trace(output_dir, trace)
 
     return {
         "figure_path": str(figure_path),
@@ -4455,6 +5713,12 @@ if __name__ == "__main__":
         default=GEMINI_DEFAULT_IMAGE_SIZE,
         help="生图分辨率（可选: 1K/2K/4K，默认: 4K）",
     )
+    parser.add_argument(
+        "--figure_language",
+        choices=["en", "zh"],
+        default="en",
+        help="步骤一生图文字语言：en 复用原提示词，zh 要求中文标签和中文字体（默认: en）",
+    )
     parser.add_argument("--svg_model", default=None, help="SVG生成模型（默认根据 provider 自动设置）")
 
     # Step 1 参考图片参数
@@ -4551,6 +5815,7 @@ if __name__ == "__main__":
         provider=args.provider,
         image_gen_model=args.image_model,
         image_size=args.image_size,
+        figure_language=args.figure_language,
         svg_gen_model=args.svg_model,
         sam_prompts=args.sam_prompt,
         min_score=args.min_score,

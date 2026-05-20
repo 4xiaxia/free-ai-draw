@@ -82,6 +82,9 @@ def run_pipeline(
                 print(f"[meta] source_processing_mode={request.source_processing_mode}")
             if resolved_sam_api_url:
                 print(f"[meta] sam_api_url={resolved_sam_api_url}")
+            if request.ca_context:
+                answer_count = len(request.ca_context.answers)
+                print(f"[meta] ca_context=enabled answers={answer_count}")
             if resolved_source_figure_path:
                 prepared_figure_path = output_dir / "figure.png"
                 _prepare_source_figure(
@@ -130,7 +133,13 @@ def run_pipeline(
                     optimize_iterations=request.optimize_iterations,
                     merge_threshold=request.merge_threshold,
                     image_size=request.image_size,
+                    figure_language=request.figure_language,
                     start_stage=request.start_stage,
+                    ca_context=(
+                        request.ca_context.model_dump(mode="json")
+                        if request.ca_context
+                        else None
+                    ),
                     cancellation_check=cancellation_check,
                 )
                 return result

@@ -37,7 +37,7 @@ curl http://127.0.0.1:8001/healthz
 
 后端支持三层模型优先级：
 
-1. 请求体显式传入 `image_model` / `svg_model`
+1. 请求体显式传入 `image_model` / `ca_api_key` / `ca_base_url` / `ca_model` / `ca_language` / `svg_model`
 2. `.env` 中的 provider 专属模型
 3. 代码里的默认模型
 
@@ -45,20 +45,30 @@ curl http://127.0.0.1:8001/healthz
 
 ```bash
 DEFAULT_IMAGE_MODEL=
+DEFAULT_CA_API_KEY=
+DEFAULT_CA_BASE_URL=
+DEFAULT_CA_MODEL=
 DEFAULT_SVG_MODEL=
 
 QINGYUN_IMAGE_MODEL=gemini-3-pro-image-preview
+QINGYUN_CA_API_KEY=
+QINGYUN_CA_BASE_URL=https://api.qingyuntop.top/v1
+QINGYUN_CA_MODEL=gemini-3.1-pro-preview
 QINGYUN_SVG_MODEL=gemini-3.1-pro-preview
 
 BIANXIE_IMAGE_MODEL=gemini-3-pro-image-preview
+BIANXIE_CA_API_KEY=
+BIANXIE_CA_BASE_URL=https://api.bianxie.ai/v1
+BIANXIE_CA_MODEL=gemini-3.1-pro-preview
 BIANXIE_SVG_MODEL=gemini-3.1-pro-preview
 ```
 
 说明：
 
-- `DEFAULT_IMAGE_MODEL` / `DEFAULT_SVG_MODEL` 是全局兜底
-- `QINGYUN_IMAGE_MODEL` / `QINGYUN_SVG_MODEL` 这类是 provider 专属覆盖
-- 如果请求体里传了 `image_model` / `svg_model`，会覆盖 `.env`
+- `DEFAULT_IMAGE_MODEL` / `DEFAULT_CA_API_KEY` / `DEFAULT_CA_BASE_URL` / `DEFAULT_CA_MODEL` / `DEFAULT_SVG_MODEL` 是全局兜底
+- `QINGYUN_IMAGE_MODEL` / `QINGYUN_CA_API_KEY` / `QINGYUN_CA_BASE_URL` / `QINGYUN_CA_MODEL` / `QINGYUN_SVG_MODEL` 这类是 provider 专属覆盖
+- 如果请求体里传了 `image_model` / `ca_api_key` / `ca_base_url` / `ca_model` / `svg_model`，会覆盖 `.env`
+- `ca_language` 控制意图选择返回语言，支持 `zh` 和 `en`，默认 `zh`；它是请求体参数，不需要写入 `.env`
 - `QINGYUN_BASE_URL` 默认走 OpenAI 兼容接口；当 `qingyun` 请求失败时，后端会自动回退到 Gemini 原生 `generateContent`
 - 如需显式指定原生 Gemini 基地址，可配置 `QINGYUN_GEMINI_BASE_URL`
 

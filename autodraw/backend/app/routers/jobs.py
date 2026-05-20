@@ -8,6 +8,8 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 
 from ..schemas import (
+    ClarifyJobRequest,
+    ClarifyJobResponse,
     CreateJobRequest,
     CreateJobResponse,
     JobLogChunkResponse,
@@ -16,6 +18,7 @@ from ..schemas import (
     ReplayJobRequest,
     ResumeJobRequest,
 )
+from ..pipeline.autofigure2 import generate_clarification_questions
 from ..services.job_runner import (
     cancel_job,
     create_job,
@@ -33,6 +36,31 @@ router = APIRouter(prefix="/api/jobs", tags=["jobs"])
 def submit_job(request: CreateJobRequest) -> CreateJobResponse:
     record = create_job(request)
     return CreateJobResponse(job_id=record.job_id, status=record.status)
+
+
+@router.post("/clarify", response_model=ClarifyJobResponse)
+def clarify_job(request: ClarifyJobRequest) -> ClarifyJobResponse:
+    method_text = request.method_text.strip()
+    if not method_text:
+        raise HTTPException(status_code=400, detail="method_text is required")
+    try:
+        payload = generate_clarification_questions(
+            method_text=method_text,
+            api_key=request.api_key,
+            base_url=request.base_url,
+            provider=request.provider,
+            ca_api_key=request.ca_api_key,
+            ca_base_url=request.ca_base_url,
+            ca_model=request.ca_model,
+            ca_language=request.ca_language,
+            image_model=request.image_model,
+            svg_model=request.svg_model,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    return ClarifyJobResponse(**payload)
 
 
 @router.get("", response_model=list[JobListItem])

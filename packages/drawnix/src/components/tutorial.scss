@@ -22,6 +22,54 @@
     display: flex;
     justify-content: center;
     align-items: center;
+    overflow: hidden;
+    background:
+      linear-gradient(180deg, rgba(237, 243, 250, 0.92) 0%, rgba(244, 247, 251, 0.8) 34%, rgba(249, 250, 252, 0.72) 100%);
+
+    &::before,
+    &::after {
+      content: '';
+      position: absolute;
+      pointer-events: none;
+      border-radius: 999px;
+      transform-origin: center;
+    }
+
+    &::before {
+      top: -14vh;
+      left: 50%;
+      width: min(96vw, 1220px);
+      height: 58vh;
+      transform: translateX(-50%);
+      background:
+        radial-gradient(
+          ellipse at center,
+          rgba(186, 214, 241, 0.9) 0%,
+          rgba(204, 224, 245, 0.68) 28%,
+          rgba(226, 237, 248, 0.34) 54%,
+          rgba(244, 248, 252, 0) 78%
+        );
+      filter: blur(16px);
+      opacity: 0.98;
+      animation: tutorial-atmosphere-drift 18s ease-in-out infinite alternate;
+    }
+
+    &::after {
+      top: 7vh;
+      right: -8vw;
+      width: min(46vw, 660px);
+      height: 36vh;
+      background:
+        radial-gradient(
+          ellipse at center,
+          rgba(241, 247, 253, 0.82) 0%,
+          rgba(230, 240, 250, 0.48) 44%,
+          rgba(245, 248, 252, 0) 80%
+        );
+      filter: blur(24px);
+      opacity: 0.9;
+      animation: tutorial-atmosphere-float 22s ease-in-out infinite alternate;
+    }
   }
 
   .tutorial-content {
@@ -32,6 +80,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    z-index: 1;
   }
 
   .tutorial-logo {
@@ -104,6 +153,28 @@
       right: 80px;
       width: 100%;
     }
+  }
+}
+
+@keyframes tutorial-atmosphere-drift {
+  0% {
+    transform: translateX(-50%) translateY(0) scale(1);
+    opacity: 0.92;
+  }
+  100% {
+    transform: translateX(-50%) translateY(1.8vh) scale(1.04);
+    opacity: 1;
+  }
+}
+
+@keyframes tutorial-atmosphere-float {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.98);
+    opacity: 0.74;
+  }
+  100% {
+    transform: translate3d(-2vw, 1.2vh, 0) scale(1.04);
+    opacity: 0.92;
   }
 }
 

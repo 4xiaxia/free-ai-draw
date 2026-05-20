@@ -1,6 +1,8 @@
 export interface FontFamilyOption {
   value: string;
   label: string;
+  previewText?: string;
+  isBuiltIn?: boolean;
 }
 
 export type FontFamilyConfigInput = FontFamilyOption | string;
@@ -15,7 +17,8 @@ export type FontRoleName =
 
 export type FontRoleFamilyConfig = Partial<Record<FontRoleName, string>>;
 
-export const DEFAULT_FONT_FAMILY = '"Segoe UI", "Helvetica Neue", Arial, sans-serif';
+export const DEFAULT_FONT_FAMILY =
+  '"Segoe UI", "Helvetica Neue", Arial, sans-serif';
 
 export const FONT_FALLBACK_FAMILIES = [
   '"Segoe UI"',
@@ -25,14 +28,102 @@ export const FONT_FALLBACK_FAMILIES = [
 ];
 
 export const FONT_FAMILY_OPTIONS: FontFamilyOption[] = [
-  { value: DEFAULT_FONT_FAMILY, label: 'Sans' },
+  {
+    value:
+      '"Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif',
+    label: '思源黑体',
+    previewText: '字',
+    isBuiltIn: true,
+  },
+  {
+    value: '"Noto Serif SC", "Songti SC", "STSong", "Times New Roman", serif',
+    label: '思源宋体',
+    previewText: '字',
+    isBuiltIn: true,
+  },
+  {
+    value:
+      '"LXGW WenKai GB Screen", "Kaiti SC", STKaiti, "Noto Serif SC", serif',
+    label: '霞鹜文楷',
+    previewText: '文',
+    isBuiltIn: true,
+  },
+  {
+    value: '"ZCOOL XiaoWei", "Noto Serif SC", "Songti SC", serif',
+    label: '站酷小薇',
+    previewText: '章',
+    isBuiltIn: true,
+  },
+  {
+    value: '"ZCOOL QingKe HuangYou", "Noto Sans SC", "PingFang SC", sans-serif',
+    label: '站酷庆科',
+    previewText: '题',
+    isBuiltIn: true,
+  },
+  {
+    value: '"Ma Shan Zheng", "Kaiti SC", STKaiti, cursive',
+    label: '马善政',
+    previewText: '签',
+    isBuiltIn: true,
+  },
+  {
+    value: '"PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
+    label: '苹方',
+    previewText: '字',
+  },
+  {
+    value: '"Microsoft YaHei", "PingFang SC", Arial, sans-serif',
+    label: '微软雅黑',
+    previewText: '字',
+  },
+  {
+    value: '"Songti SC", STSong, "Noto Serif SC", serif',
+    label: '宋体',
+    previewText: '字',
+  },
+  {
+    value: '"Kaiti SC", STKaiti, "KaiTi", serif',
+    label: '楷体',
+    previewText: '字',
+  },
+  {
+    value: '"FangSong", STFangsong, serif',
+    label: '仿宋',
+    previewText: '字',
+  },
+  {
+    value: '"NSimSun", SimSun, "Songti SC", STSong, serif',
+    label: '新宋体',
+    previewText: '字',
+  },
+  { value: DEFAULT_FONT_FAMILY, label: 'Sans', previewText: 'Aa' },
+  {
+    value: '"Source Sans 3", "Helvetica Neue", Arial, sans-serif',
+    label: 'Source Sans',
+    isBuiltIn: true,
+  },
+  {
+    value: '"IBM Plex Sans", "Helvetica Neue", Arial, sans-serif',
+    label: 'IBM Plex',
+    isBuiltIn: true,
+  },
   { value: '"Helvetica Neue", Arial, sans-serif', label: 'Helvetica' },
   { value: 'Arial, sans-serif', label: 'Arial' },
-  { value: '"Times New Roman", Times, serif', label: 'Times' },
+  {
+    value: '"Source Serif 4", Georgia, serif',
+    label: 'Source Serif',
+    isBuiltIn: true,
+  },
+  { value: '"Times New Roman", Times, serif', label: 'Times New Roman' },
   { value: 'Georgia, serif', label: 'Georgia' },
   { value: '"Trebuchet MS", sans-serif', label: 'Trebuchet' },
   { value: '"Comic Sans MS", "Trebuchet MS", cursive', label: 'Comic Sans' },
   { value: '"Courier New", Courier, monospace', label: 'Courier' },
+  {
+    value: '"JetBrains Mono", "Cascadia Code", Consolas, monospace',
+    label: 'JetBrains',
+    isBuiltIn: true,
+  },
   { value: '"Cascadia Code", Consolas, monospace', label: 'Cascadia' },
 ];
 
@@ -50,7 +141,9 @@ export const splitFontFamilyCandidates = (value?: string) => {
 };
 
 export const normalizeFontFamilyStack = (fontFamily?: string) => {
-  const rawFamilies = splitFontFamilyCandidates(fontFamily || DEFAULT_FONT_FAMILY);
+  const rawFamilies = splitFontFamilyCandidates(
+    fontFamily || DEFAULT_FONT_FAMILY
+  );
   const deduped: string[] = [];
   const seen = new Set<string>();
 
@@ -69,18 +162,16 @@ export const normalizeFontFamilyStack = (fontFamily?: string) => {
 export const DEFAULT_FONT_ROLE_FAMILIES: FontRoleFamilyConfig = {
   title:
     '"Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif',
-  body:
-    '"Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", "Helvetica Neue", Arial, sans-serif',
+  body: '"Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", "Helvetica Neue", Arial, sans-serif',
   plain:
     '"Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", "Helvetica Neue", Arial, sans-serif',
   annotation:
     '"Noto Serif SC", "Songti SC", "STSong", "Times New Roman", serif',
   'decorative-symbol':
-    '"Kaiti SC", "STKaiti", "Noto Serif SC", "Songti SC", serif',
+    '"LXGW WenKai GB Screen", "Kaiti SC", "STKaiti", "Noto Serif SC", "Songti SC", serif',
   emoji:
     '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Segoe UI Symbol", sans-serif',
-  code:
-    '"Cascadia Code", "JetBrains Mono", "SFMono-Regular", Consolas, "Courier New", monospace',
+  code: '"JetBrains Mono", "Cascadia Code", "SFMono-Regular", Consolas, "Courier New", monospace',
 };
 
 export const normalizeFontFamilyTokens = (value?: string) =>
@@ -111,7 +202,12 @@ export const normalizeFontFamilyOption = (
   if (!value || !label) {
     return null;
   }
-  return { value, label };
+  return {
+    value,
+    label,
+    previewText: input.previewText,
+    isBuiltIn: input.isBuiltIn,
+  };
 };
 
 export const normalizeFontFamilyOptions = (
@@ -126,11 +222,15 @@ export const normalizeFontFamilyOptions = (
   return normalized.length > 0 ? normalized : undefined;
 };
 
-export const setProjectFontFamilyOptions = (options?: FontFamilyConfigInput[]) => {
+export const setProjectFontFamilyOptions = (
+  options?: FontFamilyConfigInput[]
+) => {
   runtimeFontFamilyOptions = normalizeFontFamilyOptions(options);
 };
 
-export const setProjectFontRoleFamilies = (roleFamilies?: FontRoleFamilyConfig) => {
+export const setProjectFontRoleFamilies = (
+  roleFamilies?: FontRoleFamilyConfig
+) => {
   runtimeFontRoleFamilies = roleFamilies ? { ...roleFamilies } : undefined;
 };
 
@@ -141,9 +241,11 @@ export const getConfiguredFontFamilyOptions = (): FontFamilyOption[] => {
 
   const windowOptions =
     typeof window !== 'undefined'
-      ? (window as Window & {
-          __DRAWNIX_FONT_FAMILIES__?: FontFamilyConfigInput[];
-        }).__DRAWNIX_FONT_FAMILIES__
+      ? (
+          window as Window & {
+            __DRAWNIX_FONT_FAMILIES__?: FontFamilyConfigInput[];
+          }
+        ).__DRAWNIX_FONT_FAMILIES__
       : undefined;
   const normalizedWindowOptions = normalizeFontFamilyOptions(windowOptions);
   if (normalizedWindowOptions?.length) {
@@ -156,9 +258,11 @@ export const getConfiguredFontFamilyOptions = (): FontFamilyOption[] => {
 export const getConfiguredFontRoleFamilies = (): FontRoleFamilyConfig => {
   const windowRoleFamilies =
     typeof window !== 'undefined'
-      ? (window as Window & {
-          __DRAWNIX_FONT_ROLE_FAMILIES__?: FontRoleFamilyConfig;
-        }).__DRAWNIX_FONT_ROLE_FAMILIES__
+      ? (
+          window as Window & {
+            __DRAWNIX_FONT_ROLE_FAMILIES__?: FontRoleFamilyConfig;
+          }
+        ).__DRAWNIX_FONT_ROLE_FAMILIES__
       : undefined;
   return {
     ...DEFAULT_FONT_ROLE_FAMILIES,
@@ -174,7 +278,8 @@ export const resolveFontFamilyForRole = (
 ) => {
   const roleFamilies = getConfiguredFontRoleFamilies();
   const roleKey = (role || 'plain') as FontRoleName;
-  const configured = roleFamilies[roleKey] || roleFamilies.plain || DEFAULT_FONT_FAMILY;
+  const configured =
+    roleFamilies[roleKey] || roleFamilies.plain || DEFAULT_FONT_FAMILY;
   if (configured?.trim()) {
     return normalizeFontFamilyStack(configured);
   }
@@ -196,11 +301,14 @@ export const resolveFontFamilyOption = (currentFontFamily?: string) => {
   if (currentFamilies.length === 0) {
     return availableOptions[0]!;
   }
-  const currentPrimary = getPrimaryFontFamilyName(currentFontFamily)?.toLowerCase();
+  const currentPrimary =
+    getPrimaryFontFamilyName(currentFontFamily)?.toLowerCase();
   const matchedByPrimary =
     currentPrimary &&
     availableOptions.find((option) => {
-      return getPrimaryFontFamilyName(option.value)?.toLowerCase() === currentPrimary;
+      return (
+        getPrimaryFontFamilyName(option.value)?.toLowerCase() === currentPrimary
+      );
     });
   if (matchedByPrimary) {
     return matchedByPrimary;
