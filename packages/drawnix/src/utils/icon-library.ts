@@ -2,16 +2,28 @@ import { getElementOfFocusedImage } from '@plait/common';
 import {
   getSelectedElements,
   PlaitBoard,
+  PlaitElement,
   PlaitHistoryBoard,
   Point,
+  RectangleClient,
   Transforms,
+  WritableClipboardOperationType,
 } from '@plait/core';
 import { DrawTransforms, PlaitDrawElement } from '@plait/draw';
 import { MindElement, MindTransforms } from '@plait/mind';
-import { IMAGE_MIME_TYPES } from '../constants';
 import { fileOpen } from '../data/filesystem';
 import type { AssetLibraryItem } from '../asset-library/types';
-import { createAssetLibraryItemsFromFiles } from '../asset-library/utils';
+import {
+  createAssetLibraryItemsFromFiles,
+  dataUrlToBlob,
+} from '../asset-library/utils';
+import { isValidDrawnixData, normalizeDrawnixData } from '../data/snapshot';
+import { playBoardBatchEnterAnimation } from './board-assembly';
+import {
+  focusViewportOnElements,
+  focusViewportOnRectangle,
+  getBoardCenterPoint,
+} from './viewport-fit';
 
 export type IconLibraryAsset = AssetLibraryItem;
 
@@ -89,7 +101,7 @@ export const saveStoredIconLibraryAssets = (_assets: IconLibraryAsset[]) => {};
 export const pickIconLibraryFiles = async () => {
   return fileOpen<true>({
     description: 'Assets',
-    extensions: ['svg', 'png', 'jpg', 'webp'] as (keyof typeof IMAGE_MIME_TYPES)[],
+    extensions: ['svg', 'png', 'jpg', 'webp', 'drawnix'],
     multiple: true,
   });
 };
@@ -127,23 +139,60 @@ export const replaceDrawElementWithIcon = (
   });
 };
 
-export const applyIconLibraryAsset = (
+const insertDrawnixAsset = async (
   board: PlaitBoard,
   asset: IconLibraryAsset
 ) => {
+  const contents = await dataUrlToBlob(asset.dataUrl).text();
+  const parsed = JSON.parse(contents);
+  if (!isValidDrawnixData(parsed)) {
+    throw new Error('Invalid Drawnix asset');
+  }
+  const data = normalizeDrawnixData(parsed);
+  const elements = JSON.parse(JSON.stringify(data.elements));
+  board.insertFragment(
+    { elements },
+    getBoardCenterPoint(board),
+    WritableClipboardOperationType.paste
+  );
+  playBoardBatchEnterAnimation(elements, 0);
+  focusViewportOnElements(board, elements);
+  return 'insert' as const;
+};
+
+export const applyIconLibraryAsset = async (
+  board: PlaitBoard,
+  asset: IconLibraryAsset
+) => {
+  if (asset.kind === 'drawnix') {
+    return insertDrawnixAsset(board, asset);
+  }
+
   const selectedElement = getSingleSelectedElement(board);
   const imageItem = buildInsertedImageItem(asset);
 
   if (selectedElement && MindElement.isMindElement(board, selectedElement)) {
     MindTransforms.setImage(board, selectedElement as any, imageItem);
+    focusViewportOnElements(board, [selectedElement as PlaitElement]);
     return 'replace' as const;
   }
 
   if (selectedElement && isReplaceableDrawElement(selectedElement)) {
     replaceDrawElementWithIcon(board, selectedElement, asset);
+    focusViewportOnElements(board, [selectedElement as PlaitElement]);
     return 'replace' as const;
   }
 
-  DrawTransforms.insertImage(board, imageItem);
+  const centerPoint = getBoardCenterPoint(board);
+  const startPoint = [
+    centerPoint[0] - imageItem.width / 2,
+    centerPoint[1] - imageItem.height / 2,
+  ] as Point;
+  const insertedRectangle = RectangleClient.getRectangleByPoints([
+    startPoint,
+    [startPoint[0] + imageItem.width, startPoint[1] + imageItem.height],
+  ]);
+  DrawTransforms.insertImage(board, imageItem, startPoint);
+  focusViewportOnRectangle(board, insertedRectangle);
   return 'insert' as const;
 };

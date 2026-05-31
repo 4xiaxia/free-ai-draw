@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Drawnix, applyFontSchemeToCanvas } from '@drawnix/drawnix';
+import { createPortal } from 'react-dom';
+import { Drawnix } from '@drawnix/drawnix';
 import { PlaitBoard } from '@plait/core';
 import localforage from 'localforage';
 import classNames from 'classnames';
@@ -14,6 +15,7 @@ import {
   getNextUntitledName,
   LEGACY_BOARD_CONTENT_KEY,
   LEGACY_BOARDS_STORAGE_KEY,
+  moveBoardToFolder,
   normalizeBoardsState,
   removeFolderFromState,
 } from './board-storage';
@@ -23,8 +25,14 @@ type BoardShellProps = {
   onBackToLanding?: () => void;
 };
 
+type FloatingMenuPosition = {
+  top: number;
+  left: number;
+};
+
 const FONT_SCHEME_KEY = 'drawnix_font_scheme';
 const DEFAULT_FONT_SCHEME_ID = 'academic';
+type FontSchemeId = (typeof FONT_SCHEMES)[number]['id'];
 
 const FONT_SCHEMES = [
   {
@@ -41,24 +49,43 @@ const FONT_SCHEMES = [
         label: '思源黑体',
         value:
           '"Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
+        isBuiltIn: true,
       },
       {
-        label: 'Arial',
-        value: 'Arial, sans-serif',
+        label: '霞鹜文楷',
+        value:
+          '"LXGW WenKai GB Screen", "Kaiti SC", "STKaiti", "Noto Serif SC", serif',
+        isBuiltIn: true,
       },
       {
         label: '宋体',
         value:
           '"Noto Serif SC", "Songti SC", "STSong", "Times New Roman", serif',
+        isBuiltIn: true,
       },
       {
-        label: '文楷',
-        value: '"Kaiti SC", "STKaiti", "Noto Serif SC", "Songti SC", serif',
+        label: '新宋体',
+        value: '"NSimSun", SimSun, "Songti SC", STSong, serif',
       },
       {
-        label: '等宽',
+        label: 'Source Sans',
+        value: '"Source Sans 3", "Helvetica Neue", Arial, sans-serif',
+        isBuiltIn: true,
+      },
+      {
+        label: 'Source Serif',
+        value: '"Source Serif 4", Georgia, "Times New Roman", serif',
+        isBuiltIn: true,
+      },
+      {
+        label: 'Times New Roman',
+        value: '"Times New Roman", Times, serif',
+      },
+      {
+        label: 'JetBrains',
         value:
-          '"Cascadia Code", "JetBrains Mono", "SFMono-Regular", Consolas, "Courier New", monospace',
+          '"JetBrains Mono", "Cascadia Code", "SFMono-Regular", Consolas, "Courier New", monospace',
+        isBuiltIn: true,
       },
     ],
     fontRoleFamilies: {
@@ -70,10 +97,10 @@ const FONT_SCHEMES = [
       annotation:
         '"Noto Serif SC", "Songti SC", "STSong", "Times New Roman", serif',
       'decorative-symbol':
-        '"Kaiti SC", "STKaiti", "Noto Serif SC", "Songti SC", serif',
+        '"LXGW WenKai GB Screen", "Kaiti SC", "STKaiti", "Noto Serif SC", "Songti SC", serif',
       emoji:
         '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Segoe UI Symbol", sans-serif',
-      code: '"Cascadia Code", "JetBrains Mono", "SFMono-Regular", Consolas, "Courier New", monospace',
+      code: '"JetBrains Mono", "Cascadia Code", "SFMono-Regular", Consolas, "Courier New", monospace',
     },
   },
   {
@@ -90,18 +117,38 @@ const FONT_SCHEMES = [
         label: '思源黑体',
         value:
           '"Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
+        isBuiltIn: true,
       },
       {
-        label: 'Arial',
-        value: 'Arial, sans-serif',
+        label: '霞鹜文楷',
+        value:
+          '"LXGW WenKai GB Screen", "Kaiti SC", "STKaiti", "Noto Serif SC", serif',
+        isBuiltIn: true,
       },
       {
-        label: '文楷',
-        value: '"Kaiti SC", "STKaiti", "Noto Serif SC", serif',
+        label: '站酷小薇',
+        value: '"ZCOOL XiaoWei", "Noto Serif SC", "Songti SC", serif',
+        isBuiltIn: true,
+      },
+      {
+        label: '站酷庆科',
+        value:
+          '"ZCOOL QingKe HuangYou", "Noto Sans SC", "PingFang SC", sans-serif',
+        isBuiltIn: true,
+      },
+      {
+        label: '马善政',
+        value: '"Ma Shan Zheng", "Kaiti SC", "STKaiti", cursive',
+        isBuiltIn: true,
       },
       {
         label: '宋体',
         value: '"Noto Serif SC", "Songti SC", "STSong", serif',
+        isBuiltIn: true,
+      },
+      {
+        label: '新宋体',
+        value: '"NSimSun", SimSun, "Songti SC", STSong, serif',
       },
       {
         label: '等宽',
@@ -116,7 +163,8 @@ const FONT_SCHEMES = [
       plain:
         '"Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
       annotation: '"Noto Serif SC", "Songti SC", "STSong", serif',
-      'decorative-symbol': '"Kaiti SC", "STKaiti", "Noto Serif SC", serif',
+      'decorative-symbol':
+        '"LXGW WenKai GB Screen", "Kaiti SC", "STKaiti", "Noto Serif SC", serif',
       emoji:
         '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif',
       code: '"Sarasa Mono SC", "Cascadia Code", Consolas, monospace',
@@ -132,11 +180,26 @@ const FONT_SCHEMES = [
         value: '"Helvetica Neue", Arial, sans-serif',
       },
       {
+        label: 'Source Sans',
+        value: '"Source Sans 3", "Helvetica Neue", Arial, sans-serif',
+        isBuiltIn: true,
+      },
+      {
+        label: 'IBM Plex',
+        value: '"IBM Plex Sans", "Helvetica Neue", Arial, sans-serif',
+        isBuiltIn: true,
+      },
+      {
         label: 'Arial',
         value: 'Arial, sans-serif',
       },
       {
-        label: 'Times',
+        label: 'Source Serif',
+        value: '"Source Serif 4", Georgia, "Times New Roman", serif',
+        isBuiltIn: true,
+      },
+      {
+        label: 'Times New Roman',
         value: '"Times New Roman", Times, serif',
       },
       {
@@ -144,9 +207,10 @@ const FONT_SCHEMES = [
         value: 'Georgia, serif',
       },
       {
-        label: 'Cascadia',
+        label: 'JetBrains',
         value:
-          '"Cascadia Code", "JetBrains Mono", "SFMono-Regular", Consolas, "Courier New", monospace',
+          '"JetBrains Mono", "Cascadia Code", "SFMono-Regular", Consolas, "Courier New", monospace',
+        isBuiltIn: true,
       },
     ],
     fontRoleFamilies: {
@@ -155,26 +219,13 @@ const FONT_SCHEMES = [
       body: '"Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif',
       plain:
         '"Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif',
-      annotation: '"Times New Roman", Georgia, "Songti SC", serif',
+      annotation:
+        '"Source Serif 4", "Times New Roman", Georgia, "Songti SC", serif',
       'decorative-symbol': '"Helvetica Neue", Arial, sans-serif',
       emoji:
         '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif',
-      code: '"Cascadia Code", "JetBrains Mono", "SFMono-Regular", Consolas, "Courier New", monospace',
+      code: '"JetBrains Mono", "Cascadia Code", "SFMono-Regular", Consolas, "Courier New", monospace',
     },
-  },
-] as const;
-
-const FONT_ROLE_PREVIEW_ITEMS = [
-  {
-    key: 'title',
-    label: '标题',
-    sample: 'Integrated Scientific Diagramming System',
-  },
-  { key: 'body', label: '正文', sample: 'User Natural Language Request' },
-  {
-    key: 'annotation',
-    label: '注释',
-    sample: '(Human-in-the-loop refinement)',
   },
 ] as const;
 
@@ -188,15 +239,29 @@ export function BoardShell({ onBackToLanding }: BoardShellProps) {
   const [boardsState, setBoardsState] = useState<BoardsState | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [tutorial, setTutorial] = useState(false);
-  const [fontSchemeId, setFontSchemeId] =
-    useState<(typeof FONT_SCHEMES)[number]['id']>('academic');
-  const [fontPanelOpen, setFontPanelOpen] = useState(false);
+  const [fontSchemeId, setFontSchemeId] = useState<FontSchemeId>(
+    DEFAULT_FONT_SCHEME_ID
+  );
   const [managerOpen, setManagerOpen] = useState(true);
   const [renamingBoardId, setRenamingBoardId] = useState<string | null>(null);
   const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null);
+  const [createMenuOpen, setCreateMenuOpen] = useState(false);
+  const [openFolderMenuId, setOpenFolderMenuId] = useState<string | null>(null);
+  const [folderMenuPosition, setFolderMenuPosition] =
+    useState<FloatingMenuPosition | null>(null);
+  const [draggingBoardId, setDraggingBoardId] = useState<string | null>(null);
+  const [dropTargetFolderId, setDropTargetFolderId] = useState<string | null>(
+    null
+  );
+  const [dropTargetUnfiled, setDropTargetUnfiled] = useState(false);
   const [storageError, setStorageError] = useState<string | null>(null);
   const boardRef = useRef<PlaitBoard | null>(null);
   const renameInputRef = useRef<HTMLInputElement | null>(null);
+  const managerRef = useRef<HTMLDivElement | null>(null);
+  const folderMenuRef = useRef<HTMLDivElement | null>(null);
+  const folderMenuTriggerRefs = useRef<
+    Record<string, HTMLButtonElement | null>
+  >({});
 
   // Load boards from storage
   useEffect(() => {
@@ -213,8 +278,8 @@ export function BoardShell({ onBackToLanding }: BoardShellProps) {
       const normalizedFontScheme =
         typeof storedFontScheme === 'string' &&
         FONT_SCHEMES.some((scheme) => scheme.id === storedFontScheme)
-          ? (storedFontScheme as (typeof FONT_SCHEMES)[number]['id'])
-          : 'academic';
+          ? (storedFontScheme as FontSchemeId)
+          : DEFAULT_FONT_SCHEME_ID;
       setFontSchemeId(normalizedFontScheme);
 
       const storedBoardsState =
@@ -277,6 +342,7 @@ export function BoardShell({ onBackToLanding }: BoardShellProps) {
   const activeBoard = boardsState?.boards.find(
     (b) => b.id === boardsState.activeBoardId
   );
+  const activeBoardFolderId = activeBoard?.folderId ?? null;
 
   const activeFontScheme =
     FONT_SCHEMES.find((scheme) => scheme.id === fontSchemeId) ||
@@ -420,25 +486,71 @@ export function BoardShell({ onBackToLanding }: BoardShellProps) {
 
   const handleMoveActiveBoardToFolder = useCallback(
     (folderId: string | null) => {
-      persistBoards((prev) => ({
-        ...prev,
-        folders: prev.folders.map((folder) =>
-          folder.id === folderId
-            ? {
-                ...folder,
-                collapsed: false,
-                updatedAt: new Date().toISOString(),
-              }
-            : folder
-        ),
-        boards: prev.boards.map((board) =>
-          board.id === prev.activeBoardId
-            ? { ...board, folderId, updatedAt: new Date().toISOString() }
-            : board
-        ),
-      }));
+      persistBoards((prev) =>
+        moveBoardToFolder(prev, prev.activeBoardId, folderId)
+      );
     },
     [persistBoards]
+  );
+
+  const handleMoveBoardToFolder = useCallback(
+    (boardId: string, folderId: string | null) => {
+      persistBoards((prev) => moveBoardToFolder(prev, boardId, folderId));
+    },
+    [persistBoards]
+  );
+
+  const resetBoardDragState = useCallback(() => {
+    setDraggingBoardId(null);
+    setDropTargetFolderId(null);
+    setDropTargetUnfiled(false);
+  }, []);
+
+  const closeFolderMenu = useCallback(() => {
+    setOpenFolderMenuId(null);
+    setFolderMenuPosition(null);
+  }, []);
+
+  const updateFolderMenuPosition = useCallback(
+    (folderId: string) => {
+      const trigger = folderMenuTriggerRefs.current[folderId];
+      if (!trigger) {
+        closeFolderMenu();
+        return;
+      }
+
+      const rect = trigger.getBoundingClientRect();
+      const menuWidth = 176;
+      const menuHeight = activeBoardFolderId !== folderId ? 168 : 130;
+      const viewportPadding = 12;
+      const nextLeft = Math.min(
+        rect.right + 8,
+        window.innerWidth - menuWidth - viewportPadding
+      );
+      const nextTop = Math.min(
+        rect.bottom + 8,
+        window.innerHeight - menuHeight - viewportPadding
+      );
+
+      setFolderMenuPosition({
+        top: Math.max(viewportPadding, nextTop),
+        left: Math.max(viewportPadding, nextLeft),
+      });
+    },
+    [activeBoardFolderId, closeFolderMenu]
+  );
+
+  const handleToggleFolderMenu = useCallback(
+    (folderId: string) => {
+      setCreateMenuOpen(false);
+      if (openFolderMenuId === folderId) {
+        closeFolderMenu();
+        return;
+      }
+      setOpenFolderMenuId(folderId);
+      updateFolderMenuPosition(folderId);
+    },
+    [closeFolderMenu, openFolderMenuId, updateFolderMenuPosition]
   );
 
   const handleBoardChange = useCallback(
@@ -482,6 +594,51 @@ export function BoardShell({ onBackToLanding }: BoardShellProps) {
     }
   }, [renamingBoardId, renamingFolderId]);
 
+  useEffect(() => {
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (
+        managerRef.current?.contains(target) ||
+        folderMenuRef.current?.contains(target)
+      ) {
+        return;
+      }
+      if (!managerRef.current?.contains(target)) {
+        setCreateMenuOpen(false);
+        closeFolderMenu();
+      }
+    };
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+    };
+  }, [closeFolderMenu]);
+
+  useEffect(() => {
+    if (!managerOpen) {
+      setCreateMenuOpen(false);
+      closeFolderMenu();
+    }
+  }, [closeFolderMenu, managerOpen]);
+
+  useEffect(() => {
+    if (!openFolderMenuId) {
+      return;
+    }
+
+    const handleReposition = () => {
+      updateFolderMenuPosition(openFolderMenuId);
+    };
+
+    window.addEventListener('resize', handleReposition);
+    window.addEventListener('scroll', handleReposition, true);
+
+    return () => {
+      window.removeEventListener('resize', handleReposition);
+      window.removeEventListener('scroll', handleReposition, true);
+    };
+  }, [openFolderMenuId, updateFolderMenuPosition]);
+
   if (!isLoaded || !boardsState || !activeBoard) {
     return (
       <div className={styles.appShell}>
@@ -498,8 +655,19 @@ export function BoardShell({ onBackToLanding }: BoardShellProps) {
         key={board.id}
         className={classNames(styles.boardManagerItem, {
           [styles.boardManagerItemActive]: isActive,
+          [styles.boardManagerItemDragging]: draggingBoardId === board.id,
         })}
+        draggable={!isRenaming}
         onClick={() => !isRenaming && handleSwitchBoard(board.id)}
+        onDragStart={(event) => {
+          if (isRenaming) return;
+          event.dataTransfer.effectAllowed = 'move';
+          event.dataTransfer.setData('text/plain', board.id);
+          setDraggingBoardId(board.id);
+          setDropTargetFolderId(null);
+          setDropTargetUnfiled(false);
+        }}
+        onDragEnd={resetBoardDragState}
       >
         <span className={styles.boardManagerItemIcon}>#</span>
         {isRenaming ? (
@@ -563,6 +731,7 @@ export function BoardShell({ onBackToLanding }: BoardShellProps) {
     <div className={styles.appShell}>
       {/* Board Manager Sidebar */}
       <div
+        ref={managerRef}
         className={classNames(styles.boardManager, {
           [styles.boardManagerClosed]: !managerOpen,
         })}
@@ -581,26 +750,45 @@ export function BoardShell({ onBackToLanding }: BoardShellProps) {
 
         {managerOpen && (
           <>
-            <div className={styles.boardManagerCreateRow}>
+            <div className={styles.boardManagerCreateMenuWrap}>
               <button
                 type="button"
                 className={styles.boardManagerCreateBtn}
-                onClick={() => handleCreateBoard(null)}
+                onClick={() => {
+                  setCreateMenuOpen((prev) => !prev);
+                  setOpenFolderMenuId(null);
+                }}
               >
                 <span className={styles.boardManagerCreateIcon}>+</span>
-                <span>画板</span>
+                <span>新增</span>
+                <span className={styles.boardManagerCreateCaret}>
+                  {createMenuOpen ? '▲' : '▼'}
+                </span>
               </button>
-              <button
-                type="button"
-                className={classNames(
-                  styles.boardManagerCreateBtn,
-                  styles.boardManagerCreateFolderBtn
-                )}
-                onClick={handleCreateFolder}
-              >
-                <span className={styles.boardManagerCreateIcon}>+</span>
-                <span>文件夹</span>
-              </button>
+              {createMenuOpen ? (
+                <div className={styles.boardManagerMenuPanel}>
+                  <button
+                    type="button"
+                    className={styles.boardManagerMenuItem}
+                    onClick={() => {
+                      handleCreateBoard(null);
+                      setCreateMenuOpen(false);
+                    }}
+                  >
+                    新建画板
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.boardManagerMenuItem}
+                    onClick={() => {
+                      handleCreateFolder();
+                      setCreateMenuOpen(false);
+                    }}
+                  >
+                    新建文件夹
+                  </button>
+                </div>
+              ) : null}
             </div>
 
             {storageError ? (
@@ -611,7 +799,39 @@ export function BoardShell({ onBackToLanding }: BoardShellProps) {
 
             <div className={styles.boardManagerList}>
               <div className={styles.boardManagerSection}>
-                <div className={styles.boardManagerSectionHeader}>
+                <div
+                  className={classNames(styles.boardManagerSectionHeader, {
+                    [styles.boardManagerSectionHeaderDropTarget]:
+                      dropTargetUnfiled,
+                  })}
+                  onDragOver={(event) => {
+                    if (!draggingBoardId) return;
+                    event.preventDefault();
+                    if (!dropTargetUnfiled) {
+                      setDropTargetUnfiled(true);
+                    }
+                    if (dropTargetFolderId !== null) {
+                      setDropTargetFolderId(null);
+                    }
+                  }}
+                  onDragLeave={(event) => {
+                    if (
+                      event.currentTarget.contains(
+                        event.relatedTarget as Node | null
+                      )
+                    ) {
+                      return;
+                    }
+                    setDropTargetUnfiled(false);
+                  }}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    if (draggingBoardId) {
+                      handleMoveBoardToFolder(draggingBoardId, null);
+                    }
+                    resetBoardDragState();
+                  }}
+                >
                   <span>未归档</span>
                   {activeBoard.folderId ? (
                     <button
@@ -635,8 +855,41 @@ export function BoardShell({ onBackToLanding }: BoardShellProps) {
                 return (
                   <div key={folder.id} className={styles.boardManagerFolder}>
                     <div
-                      className={styles.boardManagerFolderHeader}
+                      className={classNames(styles.boardManagerFolderHeader, {
+                        [styles.boardManagerFolderHeaderDropTarget]:
+                          dropTargetFolderId === folder.id,
+                      })}
                       onClick={() => handleToggleFolder(folder.id)}
+                      onDragOver={(event) => {
+                        if (!draggingBoardId) return;
+                        event.preventDefault();
+                        if (dropTargetFolderId !== folder.id) {
+                          setDropTargetFolderId(folder.id);
+                        }
+                        if (dropTargetUnfiled) {
+                          setDropTargetUnfiled(false);
+                        }
+                      }}
+                      onDragLeave={(event) => {
+                        if (
+                          event.currentTarget.contains(
+                            event.relatedTarget as Node | null
+                          )
+                        ) {
+                          return;
+                        }
+                        if (dropTargetFolderId === folder.id) {
+                          setDropTargetFolderId(null);
+                        }
+                      }}
+                      onDrop={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        if (draggingBoardId) {
+                          handleMoveBoardToFolder(draggingBoardId, folder.id);
+                        }
+                        resetBoardDragState();
+                      }}
                     >
                       <span className={styles.boardManagerFolderToggle}>
                         {folder.collapsed ? '▶' : '▼'}
@@ -668,68 +921,37 @@ export function BoardShell({ onBackToLanding }: BoardShellProps) {
                         />
                       ) : (
                         <>
-                          <span className={styles.boardManagerFolderName}>
-                            {folder.name}
-                          </span>
-                          <span className={styles.boardManagerFolderCount}>
-                            {folderBoards.length}
+                          <span
+                            className={styles.boardManagerFolderInfo}
+                            title={folder.name}
+                          >
+                            <span className={styles.boardManagerFolderName}>
+                              {folder.name}
+                            </span>
+                            <span className={styles.boardManagerFolderCount}>
+                              {folderBoards.length}
+                            </span>
                           </span>
                         </>
                       )}
 
                       {!isRenaming && (
-                        <div className={styles.boardManagerItemActions}>
+                        <div className={styles.boardManagerFolderActions}>
                           <button
                             type="button"
-                            className={styles.boardManagerItemActionBtn}
-                            title="在此文件夹中新建画板"
+                            className={styles.boardManagerFolderMenuTrigger}
+                            title="文件夹操作"
+                            ref={(element) => {
+                              folderMenuTriggerRefs.current[folder.id] =
+                                element;
+                            }}
+                            aria-expanded={openFolderMenuId === folder.id}
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleCreateBoard(folder.id);
+                              handleToggleFolderMenu(folder.id);
                             }}
                           >
-                            +
-                          </button>
-                          {activeBoard.folderId !== folder.id ? (
-                            <button
-                              type="button"
-                              className={styles.boardManagerItemActionBtn}
-                              title="将当前画板移入此文件夹"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleMoveActiveBoardToFolder(folder.id);
-                              }}
-                            >
-                              ↘
-                            </button>
-                          ) : null}
-                          <button
-                            type="button"
-                            className={styles.boardManagerItemActionBtn}
-                            title="重命名文件夹"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setRenamingFolderId(folder.id);
-                            }}
-                          >
-                            ✎
-                          </button>
-                          <button
-                            type="button"
-                            className={styles.boardManagerItemActionBtn}
-                            title="删除文件夹"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (
-                                window.confirm(
-                                  `确定要删除文件夹「${folder.name}」吗？文件夹内画板会移到未归档。`
-                                )
-                              ) {
-                                handleDeleteFolder(folder.id);
-                              }
-                            }}
-                          >
-                            ×
+                            ⋯
                           </button>
                         </div>
                       )}
@@ -780,107 +1002,75 @@ export function BoardShell({ onBackToLanding }: BoardShellProps) {
         />
       </div>
 
-      <div className={styles.floatingTools}>
-        {fontPanelOpen ? (
-          <div className={styles.fontPanel}>
-            <div className={styles.fontPanelHeader}>
-              <div>
-                <div className={styles.topBarTitle}>字体方案</div>
-                <div className={styles.schemeDescription}>
-                  {activeFontScheme.description}
-                </div>
-              </div>
+      {openFolderMenuId && folderMenuPosition
+        ? createPortal(
+            <div
+              ref={folderMenuRef}
+              className={styles.boardManagerFloatingMenu}
+              style={{
+                top: `${folderMenuPosition.top}px`,
+                left: `${folderMenuPosition.left}px`,
+              }}
+            >
               <button
                 type="button"
-                className={styles.closeButton}
-                onClick={() => setFontPanelOpen(false)}
+                className={styles.boardManagerMenuItem}
+                onClick={() => {
+                  handleCreateBoard(openFolderMenuId);
+                  closeFolderMenu();
+                }}
               >
-                收起
+                新建画板
               </button>
-            </div>
-            <div className={styles.schemeActionRow}>
-              <label className={styles.schemeControl}>
-                <span className={styles.schemeLabel}>当前方案</span>
-                <select
-                  className={styles.schemeSelect}
-                  value={fontSchemeId}
-                  onChange={(event) => {
-                    const nextValue = event.target
-                      .value as (typeof FONT_SCHEMES)[number]['id'];
-                    setFontSchemeId(nextValue);
-                    localforage.setItem(FONT_SCHEME_KEY, nextValue);
+              {activeBoard.folderId !== openFolderMenuId ? (
+                <button
+                  type="button"
+                  className={styles.boardManagerMenuItem}
+                  onClick={() => {
+                    handleMoveActiveBoardToFolder(openFolderMenuId);
+                    closeFolderMenu();
                   }}
                 >
-                  {FONT_SCHEMES.map((scheme) => (
-                    <option key={scheme.id} value={scheme.id}>
-                      {scheme.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  移入当前画板
+                </button>
+              ) : null}
               <button
                 type="button"
-                className={styles.applyButton}
+                className={styles.boardManagerMenuItem}
                 onClick={() => {
-                  if (!boardRef.current) {
-                    return;
-                  }
-                  applyFontSchemeToCanvas(
-                    boardRef.current,
-                    activeFontScheme.fontRoleFamilies
+                  setRenamingFolderId(openFolderMenuId);
+                  closeFolderMenu();
+                }}
+              >
+                重命名文件夹
+              </button>
+              <button
+                type="button"
+                className={classNames(
+                  styles.boardManagerMenuItem,
+                  styles.boardManagerMenuDanger
+                )}
+                onClick={() => {
+                  const targetFolder = boardsState.folders.find(
+                    (folder) => folder.id === openFolderMenuId
                   );
+                  if (
+                    targetFolder &&
+                    window.confirm(
+                      `确定要删除文件夹「${targetFolder.name}」吗？文件夹内画板会移到未归档。`
+                    )
+                  ) {
+                    handleDeleteFolder(openFolderMenuId);
+                  }
+                  closeFolderMenu();
                 }}
               >
-                应用到画布
+                删除文件夹
               </button>
-              <button
-                type="button"
-                className={styles.resetButton}
-                disabled={fontSchemeId === DEFAULT_FONT_SCHEME_ID}
-                onClick={() => {
-                  setFontSchemeId(DEFAULT_FONT_SCHEME_ID);
-                  localforage.setItem(FONT_SCHEME_KEY, DEFAULT_FONT_SCHEME_ID);
-                }}
-              >
-                恢复默认
-              </button>
-            </div>
-            <div className={styles.ruleHint}>
-              <div className={styles.ruleHintTitle}>当前规则</div>
-              <div className={styles.ruleHintText}>
-                标题、正文、注释按当前全局角色字体策略导入；描边标题、emoji
-                和装饰符号优先走保真片段。
-              </div>
-            </div>
-            <div className={styles.rolePreviewList}>
-              {FONT_ROLE_PREVIEW_ITEMS.map((item) => (
-                <div className={styles.rolePreviewCard} key={item.key}>
-                  <div className={styles.rolePreviewLabel}>{item.label}</div>
-                  <div
-                    className={styles.rolePreviewText}
-                    style={{
-                      fontFamily:
-                        activeFontScheme.fontRoleFamilies[
-                          item.key as keyof typeof activeFontScheme.fontRoleFamilies
-                        ],
-                    }}
-                  >
-                    {item.sample}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <button
-            type="button"
-            className={styles.openButton}
-            onClick={() => setFontPanelOpen(true)}
-          >
-            字体方案
-          </button>
-        )}
-      </div>
+            </div>,
+            document.body
+          )
+        : null}
     </div>
   );
 }

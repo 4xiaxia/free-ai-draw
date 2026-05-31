@@ -53,3 +53,7 @@ __pycache__/
 # autodraw local runtime outputs (do not commit)
 autodraw/backend/.env
 autodraw/backend/runtime/
+
+# local generated reference/demo assets
+deepwiki/
+hyperframes/

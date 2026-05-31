@@ -1,6 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { PopupFontFamilyControl } from './font-family-control';
+import { setProjectFontFamilyOptions } from '../../../constants/font';
 
 const mockSetTextFontFamily = jest.fn();
 const mockBoard = {} as any;
@@ -44,7 +45,9 @@ jest.mock('../../select/select', () => {
         onOpenChange?: (open: boolean) => void;
         onValueChange?: (value: string) => void;
       }) => {
-        const [internalOpen, setInternalOpen] = ReactModule.useState(Boolean(open));
+        const [internalOpen, setInternalOpen] = ReactModule.useState(
+          Boolean(open)
+        );
         const actualOpen = open ?? internalOpen;
         const setOpen = (nextOpen: boolean) => {
           setInternalOpen(nextOpen);
@@ -75,9 +78,19 @@ jest.mock('../../select/select', () => {
         }
         return children;
       },
-      Content: ({ children }: { children: React.ReactNode }) => {
+      Content: ({
+        children,
+        className,
+      }: {
+        children: React.ReactNode;
+        className?: string;
+      }) => {
         const context = useSelectContext();
-        return context.open ? <div role="listbox">{children}</div> : null;
+        return context.open ? (
+          <div role="listbox" className={className}>
+            {children}
+          </div>
+        ) : null;
       },
       Item: ({
         children,
@@ -110,6 +123,7 @@ jest.mock('../../select/select', () => {
 describe('PopupFontFamilyControl', () => {
   beforeEach(() => {
     mockSetTextFontFamily.mockReset();
+    setProjectFontFamilyOptions(undefined);
   });
 
   it('选择字体选项时应触发一次字体更新', () => {
@@ -129,5 +143,66 @@ describe('PopupFontFamilyControl', () => {
       mockBoard,
       'Georgia, serif'
     );
+  });
+
+  it('内置字体应显示可见标识', () => {
+    setProjectFontFamilyOptions([
+      {
+        label: '思源黑体',
+        value: '"Noto Sans SC", Arial, sans-serif',
+        isBuiltIn: true,
+      },
+      {
+        label: 'Source Sans',
+        value: '"Source Sans 3", Arial, sans-serif',
+        isBuiltIn: true,
+      },
+      {
+        label: '宋体',
+        value: '"Songti SC", serif',
+      },
+    ]);
+
+    render(
+      <PopupFontFamilyControl
+        board={mockBoard}
+        currentFontFamily={'"Noto Sans SC", Arial, sans-serif'}
+        title={'字体'}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('combobox', { name: '字体' }));
+
+    expect(
+      globalThis.document.querySelector('.popup-font-family-option__badge-dot')
+    ).toBeTruthy();
+    expect(
+      globalThis.document.querySelector('.popup-font-family-menu')
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('option', { name: 'Source Sans' }).textContent
+    ).toBe('Source Sans');
+    expect(
+      screen.getByRole('option', { name: '宋体' }).textContent
+    ).toBe('宋体');
+    expect(
+      globalThis.document.querySelector('.popup-font-family-option__preview')
+    ).toBeFalsy();
+    expect(
+      screen.getByRole('option', { name: 'Source Sans' }).textContent
+    ).not.toContain('Aa');
+    expect(
+      screen.getByRole('option', { name: '宋体' }).textContent
+    ).not.toContain('字');
+    expect(
+      screen.getByRole('option', { name: '宋体' }).querySelector(
+        '.popup-font-family-option__badge-dot'
+      )
+    ).toBeFalsy();
+    expect(
+      screen.getByRole('option', { name: 'Source Sans' }).querySelector(
+        '.popup-font-family-option__badge-dot'
+      )
+    ).toBeTruthy();
   });
 });

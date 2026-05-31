@@ -8,15 +8,25 @@ import {
 } from '@plait/draw';
 import { unzipSync } from 'fflate';
 import type { SvgImportSummary } from '../svg-import/convert-svg-to-drawnix';
-import { resolveFontFamilyForRole } from '../constants/font';
+import {
+  normalizeFontFamilyStack,
+  resolveFontFamilyForRole,
+} from '../constants/font';
 import {
   buildSceneTextFragmentDataUrl,
   type SceneTextFragmentMetadata,
 } from './text-fragment';
 
-type SceneElementKind = 'text' | 'shape' | 'image' | 'connector' | 'group' | 'fragment' | 'frame';
+export type SceneElementKind =
+  | 'text'
+  | 'shape'
+  | 'image'
+  | 'connector'
+  | 'group'
+  | 'fragment'
+  | 'frame';
 
-interface SceneAsset {
+export interface SceneAsset {
   id: string;
   kind: 'image' | 'font';
   path: string;
@@ -25,14 +35,14 @@ interface SceneAsset {
   height?: number;
 }
 
-interface SceneBounds {
+export interface SceneBounds {
   x: number;
   y: number;
   width: number;
   height: number;
 }
 
-interface SceneTextElement {
+export interface SceneTextElement {
   id: string;
   kind: 'text';
   text: string;
@@ -81,10 +91,31 @@ interface SceneTextElement {
   }>;
 }
 
-interface SceneShapeElement {
+export interface SceneShapeElement {
   id: string;
   kind: 'shape' | 'frame';
-  shapeType?: 'rectangle' | 'round-rectangle' | 'ellipse' | 'diamond' | 'text';
+  shapeType?:
+    | 'rectangle'
+    | 'round-rectangle'
+    | 'ellipse'
+    | 'diamond'
+    | 'text'
+    | 'triangle'
+    | 'parallelogram'
+    | 'trapezoid'
+    | 'pentagon'
+    | 'hexagon'
+    | 'octagon'
+    | 'left-arrow'
+    | 'right-arrow'
+    | 'cross'
+    | 'pentagon-arrow'
+    | 'process-arrow'
+    | 'two-way-arrow'
+    | 'comment'
+    | 'round-comment'
+    | 'star'
+    | 'cloud';
   bounds: SceneBounds;
   cornerRadius?: number;
   style: {
@@ -94,14 +125,14 @@ interface SceneShapeElement {
   };
 }
 
-interface SceneImageElement {
+export interface SceneImageElement {
   id: string;
   kind: 'image';
   assetRef: string;
   layout: SceneBounds;
 }
 
-interface SceneConnectorElement {
+export interface SceneConnectorElement {
   id: string;
   kind: 'connector';
   routing: {
@@ -116,14 +147,20 @@ interface SceneConnectorElement {
   };
 }
 
-type SceneElement =
+export type SceneElement =
   | SceneTextElement
   | SceneShapeElement
   | SceneImageElement
   | SceneConnectorElement
-  | { id: string; kind: Exclude<SceneElementKind, 'text' | 'shape' | 'frame' | 'image' | 'connector'> };
+  | {
+      id: string;
+      kind: Exclude<
+        SceneElementKind,
+        'text' | 'shape' | 'frame' | 'image' | 'connector'
+      >;
+    };
 
-interface SceneDocument {
+export interface SceneDocument {
   type: 'drawnix-scene';
   version: string;
   assets: SceneAsset[];
@@ -160,7 +197,8 @@ const getBaseName = (value: string) => {
 const inferMimeType = (fileName: string) => {
   const normalized = fileName.toLowerCase();
   if (normalized.endsWith('.png')) return 'image/png';
-  if (normalized.endsWith('.jpg') || normalized.endsWith('.jpeg')) return 'image/jpeg';
+  if (normalized.endsWith('.jpg') || normalized.endsWith('.jpeg'))
+    return 'image/jpeg';
   if (normalized.endsWith('.webp')) return 'image/webp';
   if (normalized.endsWith('.svg')) return 'image/svg+xml';
   return 'application/octet-stream';
@@ -226,6 +264,38 @@ const resolveShapeType = (shapeType?: string) => {
       return BasicShapes.ellipse;
     case 'diamond':
       return BasicShapes.diamond;
+    case 'triangle':
+      return BasicShapes.triangle;
+    case 'parallelogram':
+      return BasicShapes.parallelogram;
+    case 'trapezoid':
+      return BasicShapes.trapezoid;
+    case 'pentagon':
+      return BasicShapes.pentagon;
+    case 'hexagon':
+      return BasicShapes.hexagon;
+    case 'octagon':
+      return BasicShapes.octagon;
+    case 'left-arrow':
+      return BasicShapes.leftArrow;
+    case 'right-arrow':
+      return BasicShapes.rightArrow;
+    case 'cross':
+      return BasicShapes.cross;
+    case 'pentagon-arrow':
+      return BasicShapes.pentagonArrow;
+    case 'process-arrow':
+      return BasicShapes.processArrow;
+    case 'two-way-arrow':
+      return BasicShapes.twoWayArrow;
+    case 'comment':
+      return BasicShapes.comment;
+    case 'round-comment':
+      return BasicShapes.roundComment;
+    case 'star':
+      return BasicShapes.star;
+    case 'cloud':
+      return BasicShapes.cloud;
     case 'text':
       return BasicShapes.text;
     case 'rectangle':
@@ -234,36 +304,60 @@ const resolveShapeType = (shapeType?: string) => {
   }
 };
 
-const buildTextElement = (element: SceneTextElement) => {
-  const resolvedFontFamily = resolveFontFamilyForRole(
+const resolveSceneTextFontFamily = (
+  element: SceneTextElement,
+  options?: { preferSourceFontFamily?: boolean }
+) => {
+  if (options?.preferSourceFontFamily) {
+    const sourceFamilies = (element.metadata?.fontFamilies || []).filter(
+      Boolean
+    );
+    return normalizeFontFamilyStack(
+      sourceFamilies.length
+        ? sourceFamilies.join(', ')
+        : element.style.fontFamily
+    );
+  }
+  return resolveFontFamilyForRole(
     element.metadata?.textRole,
     element.style.fontFamily,
     element.metadata?.fontFamilies
   );
+};
+
+const buildTextElement = (
+  element: SceneTextElement,
+  options?: { preferSourceFontFamily?: boolean }
+) => {
+  const resolvedFontFamily = resolveSceneTextFontFamily(element, options);
   const align =
     element.layout.anchor === 'middle'
       ? 'center'
       : element.layout.anchor === 'end'
-        ? 'right'
-        : 'left';
+      ? 'right'
+      : 'left';
   // Preserve scene-provided fontSize for fidelity; avoid hard minimums that distort imports.
   const fontSize =
     typeof element.style.fontSize === 'number' && element.style.fontSize > 0
       ? element.style.fontSize
       : 16;
-  const isItalic = String(element.style.fontStyle || '').toLowerCase() === 'italic';
+  const isItalic =
+    String(element.style.fontStyle || '').toLowerCase() === 'italic';
   const numericWeight =
     typeof element.style.fontWeight === 'number'
       ? element.style.fontWeight
       : Number.parseFloat(String(element.style.fontWeight || ''));
   const isBold =
-    String(element.style.fontWeight || '').toLowerCase() === 'bold'
-    || (Number.isFinite(numericWeight) && numericWeight >= 600);
+    String(element.style.fontWeight || '').toLowerCase() === 'bold' ||
+    (Number.isFinite(numericWeight) && numericWeight >= 600);
   const next = createGeometryElementWithText(
     BasicShapes.text,
     [
       [element.layout.x, element.layout.y],
-      [element.layout.x + element.layout.width, element.layout.y + element.layout.height],
+      [
+        element.layout.x + element.layout.width,
+        element.layout.y + element.layout.height,
+      ],
     ],
     element.text,
     {
@@ -280,7 +374,9 @@ const buildTextElement = (element: SceneTextElement) => {
         fontWeight: element.style.fontWeight,
         fontStyle: element.style.fontStyle,
         lineHeight:
-          typeof element.style.lineHeight === 'number' ? element.style.lineHeight : undefined,
+          typeof element.style.lineHeight === 'number'
+            ? element.style.lineHeight
+            : undefined,
         'line-height':
           typeof element.style.lineHeight === 'number'
             ? String(element.style.lineHeight)
@@ -293,7 +389,10 @@ const buildTextElement = (element: SceneTextElement) => {
           typeof element.style.letterSpacing === 'number'
             ? String(element.style.letterSpacing)
             : undefined,
-        opacity: typeof element.style.opacity === 'number' ? element.style.opacity : undefined,
+        opacity:
+          typeof element.style.opacity === 'number'
+            ? element.style.opacity
+            : undefined,
       },
     } as any,
     {
@@ -328,7 +427,8 @@ const buildTextElement = (element: SceneTextElement) => {
 };
 
 const buildTextFragmentMetadata = (
-  element: SceneTextElement
+  element: SceneTextElement,
+  options?: { preferSourceFontFamily?: boolean }
 ): SceneTextFragmentMetadata => ({
   kind: 'text-fragment',
   source: 'scene-import',
@@ -343,11 +443,7 @@ const buildTextFragmentMetadata = (
   hasTransform: Boolean(element.metadata?.hasTransform),
   fontFamilies: element.metadata?.fontFamilies || [],
   style: {
-    fontFamily: resolveFontFamilyForRole(
-      element.metadata?.textRole,
-      element.style.fontFamily,
-      element.metadata?.fontFamilies
-    ),
+    fontFamily: resolveSceneTextFontFamily(element, options),
     fontSize: element.style.fontSize,
     fontWeight: element.style.fontWeight,
     fontStyle: element.style.fontStyle,
@@ -370,15 +466,21 @@ const buildTextFragmentMetadata = (
   runs: element.runs || [],
 });
 
-const buildTextFragmentElement = (element: SceneTextElement) => {
-  const fragmentMetadata = buildTextFragmentMetadata(element);
+const buildTextFragmentElement = (
+  element: SceneTextElement,
+  options?: { preferSourceFontFamily?: boolean }
+) => {
+  const fragmentMetadata = buildTextFragmentMetadata(element, options);
   return {
     id: element.id,
     type: 'image',
     url: buildSceneTextFragmentDataUrl(fragmentMetadata),
     points: [
       [element.layout.x, element.layout.y],
-      [element.layout.x + element.layout.width, element.layout.y + element.layout.height],
+      [
+        element.layout.x + element.layout.width,
+        element.layout.y + element.layout.height,
+      ],
     ],
     sceneImportMetadata: fragmentMetadata,
   } as unknown as PlaitElement;
@@ -426,7 +528,10 @@ const buildShapeElement = (element: SceneShapeElement) => {
     resolveShapeType(element.shapeType),
     [
       [element.bounds.x, element.bounds.y],
-      [element.bounds.x + element.bounds.width, element.bounds.y + element.bounds.height],
+      [
+        element.bounds.x + element.bounds.width,
+        element.bounds.y + element.bounds.height,
+      ],
     ],
     '',
     {
@@ -449,7 +554,10 @@ const buildImageElement = (element: SceneImageElement, assetUrl: string) => {
     url: assetUrl,
     points: [
       [element.layout.x, element.layout.y],
-      [element.layout.x + element.layout.width, element.layout.y + element.layout.height],
+      [
+        element.layout.x + element.layout.width,
+        element.layout.y + element.layout.height,
+      ],
     ],
   } as unknown as PlaitElement;
 };
@@ -457,10 +565,22 @@ const buildImageElement = (element: SceneImageElement, assetUrl: string) => {
 const buildConnectorElement = (element: SceneConnectorElement) => {
   const points = element.routing.points;
   const next = createArrowLineElement(
-    element.routing.shape === 'elbow' ? ArrowLineShape.elbow : ArrowLineShape.straight,
+    element.routing.shape === 'elbow'
+      ? ArrowLineShape.elbow
+      : ArrowLineShape.straight,
     [points[0]!, points[points.length - 1]!] as [Point, Point],
-    { marker: element.style.startMarker === 'arrow' ? ArrowLineMarkerType.arrow : ArrowLineMarkerType.none } as any,
-    { marker: element.style.endMarker === 'arrow' ? ArrowLineMarkerType.arrow : ArrowLineMarkerType.none } as any,
+    {
+      marker:
+        element.style.startMarker === 'arrow'
+          ? ArrowLineMarkerType.arrow
+          : ArrowLineMarkerType.none,
+    } as any,
+    {
+      marker:
+        element.style.endMarker === 'arrow'
+          ? ArrowLineMarkerType.arrow
+          : ArrowLineMarkerType.none,
+    } as any,
     undefined,
     {
       strokeColor: element.style.stroke,
@@ -474,50 +594,26 @@ const buildConnectorElement = (element: SceneConnectorElement) => {
   return next;
 };
 
-export const importScenePackage = async (file: File): Promise<SceneImportResult> => {
-  const archive = unzipSync(await readFileAsUint8Array(file));
-  const entryNames = Object.keys(archive).map((entry) => normalizePath(entry));
-  const sceneEntry = entryNames.find((entry) => getBaseName(entry) === 'scene.json');
-
-  if (!sceneEntry) {
-    throw new Error('ZIP 中未找到 scene.json');
-  }
-
-  const sceneBytes = archive[sceneEntry];
-  if (!sceneBytes) {
-    throw new Error('无法读取 scene.json');
-  }
-
-  const scene = JSON.parse(await decodeUtf8(sceneBytes)) as SceneDocument;
-  if (scene.type !== 'drawnix-scene' || !Array.isArray(scene.elements)) {
-    throw new Error('scene.json 格式无效');
-  }
-
-  const assetUrlMap = new Map<string, string>();
-  for (const asset of scene.assets || []) {
-    if (asset.kind !== 'image') {
-      continue;
-    }
-    const normalizedPath = normalizePath(asset.path);
-    const assetBytes = archive[normalizedPath];
-    if (!assetBytes) {
-      continue;
-    }
-    assetUrlMap.set(asset.id, toDataUrl(assetBytes, normalizedPath, asset.mimeType));
-  }
-
+export const compileSceneToDrawnix = (
+  scene: SceneDocument,
+  assetUrlMap: Map<string, string> = new Map(),
+  options?: { preserveSourceOrder?: boolean; preferSourceFontFamily?: boolean }
+) => {
   const summary = emptySummary();
   const elements: PlaitElement[] = [];
   const warnings: string[] = [];
+  const sourceElements = options?.preserveSourceOrder
+    ? scene.elements
+    : sortSceneElementsForRender(scene.elements);
 
-  for (const element of sortSceneElementsForRender(scene.elements)) {
+  for (const element of sourceElements) {
     switch (element.kind) {
       case 'text':
         if (element.editing?.mode === 'svg-fragment-text') {
-          elements.push(buildTextFragmentElement(element));
+          elements.push(buildTextFragmentElement(element, options));
           summary.componentCount += 1;
         } else {
-          elements.push(buildTextElement(element));
+          elements.push(buildTextElement(element, options));
         }
         summary.textCount += 1;
         break;
@@ -547,6 +643,49 @@ export const importScenePackage = async (file: File): Promise<SceneImportResult>
   }
 
   summary.warnings = warnings;
+  return { elements, summary };
+};
+
+export const importScenePackage = async (
+  file: File
+): Promise<SceneImportResult> => {
+  const archive = unzipSync(await readFileAsUint8Array(file));
+  const entryNames = Object.keys(archive).map((entry) => normalizePath(entry));
+  const sceneEntry = entryNames.find(
+    (entry) => getBaseName(entry) === 'scene.json'
+  );
+
+  if (!sceneEntry) {
+    throw new Error('ZIP 中未找到 scene.json');
+  }
+
+  const sceneBytes = archive[sceneEntry];
+  if (!sceneBytes) {
+    throw new Error('无法读取 scene.json');
+  }
+
+  const scene = JSON.parse(await decodeUtf8(sceneBytes)) as SceneDocument;
+  if (scene.type !== 'drawnix-scene' || !Array.isArray(scene.elements)) {
+    throw new Error('scene.json 格式无效');
+  }
+
+  const assetUrlMap = new Map<string, string>();
+  for (const asset of scene.assets || []) {
+    if (asset.kind !== 'image') {
+      continue;
+    }
+    const normalizedPath = normalizePath(asset.path);
+    const assetBytes = archive[normalizedPath];
+    if (!assetBytes) {
+      continue;
+    }
+    assetUrlMap.set(
+      asset.id,
+      toDataUrl(assetBytes, normalizedPath, asset.mimeType)
+    );
+  }
+
+  const { elements, summary } = compileSceneToDrawnix(scene, assetUrlMap);
   return {
     elements,
     summary,

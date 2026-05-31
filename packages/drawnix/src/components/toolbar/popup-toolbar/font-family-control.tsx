@@ -4,7 +4,6 @@ import { setTextFontFamily } from '../../../transforms/property';
 import { Select } from '../../select/select';
 import { ChevronDownIcon } from '../../icons';
 import {
-  getPrimaryFontFamilyName,
   getConfiguredFontFamilyOptions,
   resolveFontFamilyOption,
 } from '../../../constants/font';
@@ -69,7 +68,7 @@ export const PopupFontFamilyControl: React.FC<PopupFontFamilyControlProps> = ({
       <Select.Content
         className="popup-font-family-menu"
         container={container}
-        style={{ minWidth: '11rem' }}
+        style={{ minWidth: '13.5rem' }}
         onPointerDown={(event) => {
           event.preventDefault();
           event.stopPropagation();
@@ -86,20 +85,19 @@ export const PopupFontFamilyControl: React.FC<PopupFontFamilyControlProps> = ({
             className="popup-font-family-option"
           >
             <span className="popup-font-family-option__content">
-              <span className="popup-font-family-option__meta">
+              <span
+                className="popup-font-family-option__name-wrap"
+                style={{ fontFamily: option.value }}
+              >
                 <span className="popup-font-family-option__name">
                   {option.label}
                 </span>
-                <span className="popup-font-family-option__family">
-                  {getPrimaryFontFamilyName(option.value)}
-                </span>
-              </span>
-              <span
-                className="popup-font-family-option__preview"
-                style={{ fontFamily: option.value }}
-                aria-hidden="true"
-              >
-                Ag
+                {option.isBuiltIn ? (
+                  <span
+                    className="popup-font-family-option__badge-dot"
+                    aria-hidden="true"
+                  />
+                ) : null}
               </span>
             </span>
           </Select.Item>

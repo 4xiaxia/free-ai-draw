@@ -1,8 +1,5 @@
 import { PlaitBoard } from '@plait/core';
-import {
-  isValidDrawnixData,
-  normalizeDrawnixData,
-} from './snapshot';
+import { isValidDrawnixData, normalizeDrawnixData } from './snapshot';
 import { IMAGE_MIME_TYPES, MIME_TYPES } from '../constants';
 import { ValueOf } from '../utils/utility-types';
 import { DataURL } from '../types';
@@ -49,10 +46,17 @@ export const blobToArrayBuffer = (blob: Blob): Promise<ArrayBuffer> => {
 
 export const normalizeFile = async (file: File) => {
   if (!file.type) {
-    if (file?.name?.endsWith('.drawnix')) {
+    const fileName = file?.name?.toLowerCase() || '';
+    if (fileName.endsWith('.drawnix')) {
       file = createFile(
         await blobToArrayBuffer(file),
         MIME_TYPES.drawnix,
+        file.name
+      );
+    } else if (fileName.endsWith('.pptx')) {
+      file = createFile(
+        await blobToArrayBuffer(file),
+        MIME_TYPES.pptx,
         file.name
       );
     }

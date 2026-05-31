@@ -7,18 +7,13 @@ import {
 } from '../../icons';
 import { useBoard, useListRender } from '@plait-board/react-board';
 import {
-  BoardTransforms,
   PlaitBoard,
   PlaitElement,
   PlaitTheme,
   ThemeColorMode,
   Viewport,
 } from '@plait/core';
-import {
-  openJSONFile,
-  parseJSONFile,
-  saveAsJSON,
-} from '../../../data/json';
+import { openJSONFile, parseJSONFile, saveAsJSON } from '../../../data/json';
 import { hasValidViewport } from '../../../data/snapshot';
 import {
   initialBoardAssemblyProgress,
@@ -28,13 +23,15 @@ import MenuItem from '../../menu/menu-item';
 import MenuItemLink from '../../menu/menu-item-link';
 import { saveAsImage, saveAsSvg } from '../../../utils/image';
 import { saveAsPptx } from '../../../utils/pptx-export';
+import { importPptxPackage } from '../../../pptx-import/import-pptx-package';
 import { useDrawnix } from '../../../hooks/use-drawnix';
 import { useI18n } from '../../../i18n';
 import Menu from '../../menu/menu';
 import { useContext } from 'react';
 import { MenuContentPropsContext } from '../../menu/common';
-import { EVENT } from '../../../constants';
+import { EVENT, MIME_TYPES } from '../../../constants';
 import { getShortcutKey } from '../../../utils/common';
+import { focusViewportOnElements } from '../../../utils/viewport-fit';
 import { AppLogo } from '../../app-logo';
 import './app-menu-items.scss';
 
@@ -50,7 +47,9 @@ export const SaveToFile = () => {
       icon={SaveFileIcon}
       aria-label={t('menu.saveFile')}
       shortcut={getShortcutKey('CtrlOrCmd+S')}
-    >{t('menu.saveFile')}</MenuItem>
+    >
+      {t('menu.saveFile')}
+    </MenuItem>
   );
 };
 SaveToFile.displayName = 'SaveToFile';
@@ -76,14 +75,16 @@ export const OpenFile = () => {
       parentG: PlaitBoard.getElementHost(board),
     });
     if (!hasValidViewport(viewport)) {
-      BoardTransforms.fitViewport(board);
+      focusViewportOnElements(board, value);
     }
   };
 
   const setBoardImportProgress = (
     updater:
       | typeof initialBoardAssemblyProgress
-      | ((current: typeof initialBoardAssemblyProgress) => typeof initialBoardAssemblyProgress)
+      | ((
+          current: typeof initialBoardAssemblyProgress
+        ) => typeof initialBoardAssemblyProgress)
   ) => {
     setAppState((prev) => ({
       ...prev,
@@ -96,7 +97,9 @@ export const OpenFile = () => {
 
   const clearBoardImportProgress = async () => {
     const settleDuration =
-      typeof process !== 'undefined' && process.env.NODE_ENV === 'test' ? 0 : 180;
+      typeof process !== 'undefined' && process.env.NODE_ENV === 'test'
+        ? 0
+        : 180;
     await new Promise<void>((resolve) => {
       window.setTimeout(resolve, settleDuration);
     });
@@ -124,6 +127,10 @@ export const OpenFile = () => {
     await new Promise<void>((resolve) => {
       window.requestAnimationFrame(() => resolve());
     });
+  };
+
+  const isPptxFile = (file: File) => {
+    return file.type === MIME_TYPES.pptx || /\.pptx$/i.test(file.name || '');
   };
 
   const clearAndLoadWithAssembly = async (
@@ -154,7 +161,7 @@ export const OpenFile = () => {
     });
 
     if (!hasValidViewport(viewport)) {
-      BoardTransforms.fitViewport(board);
+      focusViewportOnElements(board, value);
     }
   };
 
@@ -167,6 +174,12 @@ export const OpenFile = () => {
             const displayName = file.name || t('menu.open');
             startPreparingImportProgress(displayName);
             await waitForNextPaint();
+            if (isPptxFile(file)) {
+              const result = await importPptxPackage(file);
+              await clearAndLoadWithAssembly(result.elements, displayName);
+              await clearBoardImportProgress();
+              return;
+            }
             const { data, fileName } = await parseJSONFile(board, file);
             await clearAndLoadWithAssembly(
               data.elements,
@@ -182,7 +195,9 @@ export const OpenFile = () => {
       }}
       icon={OpenFileIcon}
       aria-label={t('menu.open')}
-    >{t('menu.open')}</MenuItem>
+    >
+      {t('menu.open')}
+    </MenuItem>
   );
 };
 OpenFile.displayName = 'OpenFile';
@@ -199,13 +214,15 @@ export const SaveAsImage = () => {
         saveAsImage(board, true);
       }}
       submenu={
-        <Menu onSelect={() => {
-          const itemSelectEvent = new CustomEvent(EVENT.MENU_ITEM_SELECT, {
-            bubbles: true,
-            cancelable: true,
-          });
-          menuContentProps.onSelect?.(itemSelectEvent);
-        }}>
+        <Menu
+          onSelect={() => {
+            const itemSelectEvent = new CustomEvent(EVENT.MENU_ITEM_SELECT, {
+              bubbles: true,
+              cancelable: true,
+            });
+            menuContentProps.onSelect?.(itemSelectEvent);
+          }}
+        >
           <MenuItem
             onSelect={() => {
               saveAsSvg(board);

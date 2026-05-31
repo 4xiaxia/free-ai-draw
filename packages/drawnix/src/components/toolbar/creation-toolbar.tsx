@@ -29,6 +29,9 @@ import {
   BasicShapes,
   DrawPointerType,
   FlowchartSymbols,
+  SwimlaneDrawSymbols,
+  TableSymbols,
+  UMLSymbols,
 } from '@plait/draw';
 import { FreehandPanel, FREEHANDS } from './freehand-panel/freehand-panel';
 import { ShapePicker } from '../shape-picker';
@@ -134,7 +137,10 @@ export const isArrowLinePointer = (board: PlaitBoard) => {
 export const isShapePointer = (board: PlaitBoard) => {
   return (
     Object.keys(BasicShapes).includes(board.pointer) ||
-    Object.keys(FlowchartSymbols).includes(board.pointer)
+    Object.keys(FlowchartSymbols).includes(board.pointer) ||
+    Object.keys(UMLSymbols).includes(board.pointer) ||
+    Object.keys(SwimlaneDrawSymbols).includes(board.pointer) ||
+    Object.keys(TableSymbols).includes(board.pointer)
   );
 };
 

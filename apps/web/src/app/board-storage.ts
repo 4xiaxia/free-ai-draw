@@ -179,6 +179,29 @@ export function removeFolderFromState(
   };
 }
 
+export function moveBoardToFolder(
+  state: BoardsState,
+  boardId: string,
+  folderId: string | null
+): BoardsState {
+  const now = new Date().toISOString();
+  return {
+    ...state,
+    folders: state.folders.map((folder) =>
+      folder.id === folderId
+        ? {
+            ...folder,
+            collapsed: false,
+            updatedAt: now,
+          }
+        : folder
+    ),
+    boards: state.boards.map((board) =>
+      board.id === boardId ? { ...board, folderId, updatedAt: now } : board
+    ),
+  };
+}
+
 function normalizeFolders(folders: unknown): BoardFolderRecord[] {
   if (!Array.isArray(folders)) {
     return [];

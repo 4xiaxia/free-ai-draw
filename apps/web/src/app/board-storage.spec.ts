@@ -1,5 +1,6 @@
 import {
   getNextUntitledName,
+  moveBoardToFolder,
   normalizeBoardsState,
   removeFolderFromState,
 } from './board-storage';
@@ -92,5 +93,33 @@ describe('board-storage', () => {
     expect(next.folders).toHaveLength(0);
     expect(next.boards).toHaveLength(1);
     expect(next.boards[0].folderId).toBeNull();
+  });
+
+  it('支持将画板移入文件夹并移回未归档', () => {
+    const state: BoardsState = {
+      version: 2,
+      folders: [
+        {
+          id: 'folder-1',
+          name: '项目图',
+          collapsed: true,
+          createdAt: '2026-05-05T00:00:00.000Z',
+          updatedAt: '2026-05-05T00:00:00.000Z',
+        },
+      ],
+      boards: [createBoard('board-1', '流程图')],
+      activeBoardId: 'board-1',
+    };
+
+    const movedIntoFolder = moveBoardToFolder(state, 'board-1', 'folder-1');
+    expect(movedIntoFolder.boards[0].folderId).toBe('folder-1');
+    expect(movedIntoFolder.folders[0].collapsed).toBe(false);
+
+    const movedBackToUnfiled = moveBoardToFolder(
+      movedIntoFolder,
+      'board-1',
+      null
+    );
+    expect(movedBackToUnfiled.boards[0].folderId).toBeNull();
   });
 });

@@ -1,0 +1,236 @@
+{
+  "main": {
+    "id": "1ddda767361f558a",
+    "type": "split",
+    "children": [
+      {
+        "id": "3c77f36bb52c8f82",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "05af50f28880386a",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "deepwiki/技术架构与 Monorepo 组织/Nx Monorepo 结构与模块化设计/Nx 全局配置与任务调度.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "Nx 全局配置与任务调度"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "38d5dc11e66f2184",
+    "type": "split",
+    "children": [
+      {
+        "id": "852e19f42eef048d",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "e88e872e852ed52f",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "文件列表"
+            }
+          },
+          {
+            "id": "5045ac2cf8b195f3",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "搜索"
+            }
+          },
+          {
+            "id": "5174186ae4f6ca7b",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "书签"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "47b2e49d19fffa14",
+    "type": "split",
+    "children": [
+      {
+        "id": "9fd3bee389b1f02b",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "a5ca00febdfe5868",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "pic/components/icon_AF01.png",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "icon_AF01 的反向链接列表"
+            }
+          },
+          {
+            "id": "2d274d3491a86d79",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "pic/components/icon_AF01.png",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "icon_AF01 的出链列表"
+            }
+          },
+          {
+            "id": "46c34dbd9c29772c",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "标签"
+            }
+          },
+          {
+            "id": "5eec85d4db747af6",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "添加笔记属性"
+            }
+          },
+          {
+            "id": "3f4a4771f70bd85f",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "pic/components/icon_AF01.png",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "icon_AF01 的大纲"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:打开快速切换": false,
+      "graph:查看关系图谱": false,
+      "canvas:新建白板": false,
+      "daily-notes:打开/创建今天的日记": false,
+      "templates:插入模板": false,
+      "command-palette:打开命令面板": false,
+      "bases:新建数据库": false
+    }
+  },
+  "active": "05af50f28880386a",
+  "lastOpenFiles": [
+    "autodraw/backend/runtime/jobs/20260514_032903_ce3d3bc3/bundle.zip",
+    "autodraw/backend/runtime/jobs/20260514_032903_ce3d3bc3/manifest.json",
+    "autodraw/backend/runtime/jobs/20260514_032903_ce3d3bc3/final.svg",
+    "autodraw/backend/runtime/jobs/20260514_032903_ce3d3bc3/optimized_template.svg",
+    "autodraw/backend/runtime/jobs/20260514_032903_ce3d3bc3/template.svg",
+    "autodraw/backend/runtime/jobs/20260514_032903_ce3d3bc3/icons/icon_AF32_nobg.png",
+    "autodraw/backend/runtime/jobs/20260514_032903_ce3d3bc3/icons/icon_AF32.png",
+    "autodraw/backend/runtime/jobs/20260514_032903_ce3d3bc3/icons/icon_AF31_nobg.png",
+    "autodraw/backend/runtime/jobs/20260514_032903_ce3d3bc3/icons/icon_AF31.png",
+    "autodraw/backend/runtime/jobs/20260514_032903_ce3d3bc3/icons/icon_AF30_nobg.png",
+    "autodraw/backend/runtime/jobs/20260514_032903_ce3d3bc3/icons/icon_AF30.png",
+    "autodraw/backend/runtime/jobs/20260514_032903_ce3d3bc3/icons/icon_AF29_nobg.png",
+    "autodraw/backend/runtime/jobs/20260514_032903_ce3d3bc3/icons",
+    "autodraw/backend/runtime/jobs/20260514_032903_ce3d3bc3/boxlib.json",
+    "autodraw/backend/runtime/jobs/20260514_032903_ce3d3bc3/run.log",
+    "autodraw/backend/runtime/jobs/20260514_032903_ce3d3bc3/process_trace.json",
+    "autodraw/backend/runtime/jobs/20260514_032903_ce3d3bc3/job.json",
+    "autodraw/backend/runtime/jobs/20260514_032903_ce3d3bc3",
+    "autodraw/backend/runtime/jobs/20260514_031459_009f005a/bundle.zip",
+    "autodraw/backend/runtime/jobs/20260514_031459_009f005a/manifest.json",
+    "autodraw/backend/runtime/jobs/20260514_031459_009f005a/run.log",
+    "deepwiki/技术架构与 Monorepo 组织/Nx Monorepo 结构与模块化设计/应用层组织与 Web 入口.md",
+    "deepwiki/后端 AI 服务架构/AI 处理流水线与算法集成.md",
+    "deepwiki/后端 AI 服务架构/异步任务调度与 Job 运行机制.md",
+    "deepwiki/国际化、测试与质量保障/国际化实现.md",
+    "deepwiki/部署、运维与贡献指南/部署指南：Docker 容器化与 Cloudflare Pages.md",
+    "deepwiki/Drawnix 绘图引擎核心库/核心 UI 组件体系/工具栏体系与动态交互.md",
+    "hyperframes/xai-board-showcase/README.md",
+    "hyperframes/xai-board-showcase/DESIGN.md",
+    "docs/mindmap-product-upgrade-plan.md",
+    "docs/flowchart-product-upgrade-plan.md",
+    "deepwiki/部署、运维与贡献指南/常见问题：汇总已知问题与解决方案.md",
+    "deepwiki/技术架构与 Monorepo 组织/Nx Monorepo 结构与模块化设计/核心库模块化设计.md",
+    "deepwiki/Drawnix 绘图引擎核心库/核心 UI 组件体系/基础 UI 框架与通用组件.md",
+    "deepwiki/技术架构与 Monorepo 组织/Nx Monorepo 结构与模块化设计/Nx 全局配置与任务调度.md",
+    "deepwiki/Drawnix 绘图引擎核心库/AI 辅助绘图功能实现/AutoDraw 智能重构与美化.md",
+    "deepwiki/Drawnix 绘图引擎核心库/AI 辅助绘图功能实现/LLM-Mermaid 智能对话系统.md",
+    "deepwiki/Drawnix 绘图引擎核心库/核心 UI 组件体系/AI 辅助功能 UI 实现.md",
+    "deepwiki/Drawnix 绘图引擎核心库/AI 辅助绘图功能实现/AI 图片生成与编辑交互.md",
+    "deepwiki/Drawnix 绘图引擎核心库/核心 UI 组件体系/属性编辑器与交互控件.md",
+    "deepwiki/部署、运维与贡献指南/贡献指南：代码风格、PR 流程与 AGENTS 规范.md",
+    "deepwiki/智能对话绘图：LLM-Mermaid 体系/智能意图规划与 Prompt 工程.md",
+    "deepwiki/智能对话绘图：LLM-Mermaid 体系/对话与预览交互界面.md",
+    "deepwiki/智能对话绘图：LLM-Mermaid 体系/Mermaid 转换与解析引擎.md",
+    "deepwiki/技术架构与 Monorepo 组织/前后端通信与 API 协议规范.md",
+    "deepwiki/技术架构与 Monorepo 组织/依赖管理与构建流水线.md",
+    "未命名.canvas"
+  ]
+}

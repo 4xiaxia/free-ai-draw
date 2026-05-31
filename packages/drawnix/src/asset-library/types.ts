@@ -1,6 +1,6 @@
 export type AssetLibrarySource = 'local' | 'ai' | 'built-in';
 
-export type AssetLibraryKind = 'image' | 'svg';
+export type AssetLibraryKind = 'image' | 'svg' | 'drawnix';
 
 export type AssetLibraryItem = {
   id: string;
@@ -17,6 +17,7 @@ export type AssetLibraryItem = {
   isSubject: boolean;
   width?: number;
   height?: number;
+  elementCount?: number;
   dataUrl: string;
   thumbnailDataUrl?: string;
 };
@@ -25,6 +26,7 @@ export type AssetLibraryFilter =
   | 'all'
   | 'image'
   | 'svg'
+  | 'drawnix'
   | 'favorite'
   | 'local'
   | 'ai'

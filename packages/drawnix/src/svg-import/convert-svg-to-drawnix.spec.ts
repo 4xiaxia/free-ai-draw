@@ -75,7 +75,8 @@ jest.mock('@plait/draw', () => ({
 
 describe('convertSvgToDrawnix', () => {
   const originalGetBBox = (globalThis as any).SVGElement?.prototype?.getBBox;
-  const originalGetBoundingClientRect = (globalThis as any).HTMLElement?.prototype?.getBoundingClientRect;
+  const originalGetBoundingClientRect = (globalThis as any).HTMLElement
+    ?.prototype?.getBoundingClientRect;
 
   const parseMatrix = (value?: string | null) => {
     const matched = value?.match(
@@ -113,7 +114,10 @@ describe('convertSvgToDrawnix', () => {
       transformPoint([bounds.x, bounds.y], matrix),
       transformPoint([bounds.x + bounds.width, bounds.y], matrix),
       transformPoint([bounds.x, bounds.y + bounds.height], matrix),
-      transformPoint([bounds.x + bounds.width, bounds.y + bounds.height], matrix),
+      transformPoint(
+        [bounds.x + bounds.width, bounds.y + bounds.height],
+        matrix
+      ),
     ];
     const xs = corners.map(([x]) => x);
     const ys = corners.map(([, y]) => y);
@@ -143,73 +147,84 @@ describe('convertSvgToDrawnix', () => {
         const x = Number(this.getAttribute?.('x') || 0);
         const fontSize = Number(this.getAttribute?.('font-size') || 16);
         const text = this.textContent || '';
-        return transformBounds({
-          x,
-          y: Number(this.getAttribute?.('y') || 0) - fontSize,
-          width: Math.max(text.length * fontSize * 0.6, fontSize),
-          height: Math.max(fontSize * 1.2, 20),
-        }, matrix);
+        return transformBounds(
+          {
+            x,
+            y: Number(this.getAttribute?.('y') || 0) - fontSize,
+            width: Math.max(text.length * fontSize * 0.6, fontSize),
+            height: Math.max(fontSize * 1.2, 20),
+          },
+          matrix
+        );
       }
       return transformBounds({ x: 0, y: 0, width: 10, height: 10 }, matrix);
     };
 
     if ((globalThis as any).HTMLElement) {
-      (globalThis as any).HTMLElement.prototype.getBoundingClientRect = function () {
-        const element = this as HTMLElement;
-        if (element.tagName?.toLowerCase() === 'span') {
-          const fontFamily = element.style.fontFamily || '';
-          if (/georgia|courier|comic sans|chalkboard|arial/i.test(fontFamily)) {
-            const text = element.textContent || '';
-            const fontSize = Number.parseFloat(element.style.fontSize || '16') || 16;
-            const lineHeight = Number.parseFloat(element.style.lineHeight || '');
-            const letterSpacing = Number.parseFloat(element.style.letterSpacing || '0') || 0;
-            const widthFactor = /georgia/i.test(fontFamily)
-              ? 0.74
-              : /comic sans|chalkboard/i.test(fontFamily)
+      (globalThis as any).HTMLElement.prototype.getBoundingClientRect =
+        function () {
+          const element = this as HTMLElement;
+          if (element.tagName?.toLowerCase() === 'span') {
+            const fontFamily = element.style.fontFamily || '';
+            if (
+              /georgia|courier|comic sans|chalkboard|arial/i.test(fontFamily)
+            ) {
+              const text = element.textContent || '';
+              const fontSize =
+                Number.parseFloat(element.style.fontSize || '16') || 16;
+              const lineHeight = Number.parseFloat(
+                element.style.lineHeight || ''
+              );
+              const letterSpacing =
+                Number.parseFloat(element.style.letterSpacing || '0') || 0;
+              const widthFactor = /georgia/i.test(fontFamily)
+                ? 0.74
+                : /comic sans|chalkboard/i.test(fontFamily)
                 ? 0.52
                 : /arial/i.test(fontFamily)
-                  ? 0.56
-                  : 0.5;
-            const glyphHeight = /georgia/i.test(fontFamily)
-              ? fontSize * 1.32
-              : /comic sans|chalkboard/i.test(fontFamily)
+                ? 0.56
+                : 0.5;
+              const glyphHeight = /georgia/i.test(fontFamily)
+                ? fontSize * 1.32
+                : /comic sans|chalkboard/i.test(fontFamily)
                 ? fontSize * 1.22
                 : fontSize * 1.2;
-            const width = Math.max(
-              text.length * fontSize * widthFactor + Math.max(text.length - 1, 0) * letterSpacing,
-              fontSize * 0.75
-            );
-            const height = Number.isFinite(lineHeight)
-              ? Math.max(lineHeight, glyphHeight)
-              : glyphHeight;
-            return {
-              x: 0,
-              y: 0,
-              top: 0,
-              left: 0,
-              right: width,
-              bottom: height,
-              width,
-              height,
-              toJSON: () => ({}),
-            };
+              const width = Math.max(
+                text.length * fontSize * widthFactor +
+                  Math.max(text.length - 1, 0) * letterSpacing,
+                fontSize * 0.75
+              );
+              const height = Number.isFinite(lineHeight)
+                ? Math.max(lineHeight, glyphHeight)
+                : glyphHeight;
+              return {
+                x: 0,
+                y: 0,
+                top: 0,
+                left: 0,
+                right: width,
+                bottom: height,
+                width,
+                height,
+                toJSON: () => ({}),
+              };
+            }
           }
-        }
-        if (originalGetBoundingClientRect) {
-          return originalGetBoundingClientRect.call(this);
-        }
-        return {
-          x: 0,
-          y: 0,
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          width: 0,
-          height: 0,
-          toJSON: () => ({}),
+          if (originalGetBoundingClientRect) {
+            return originalGetBoundingClientRect.call(this);
+          }
+          return {
+            x: 0,
+            y: 0,
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: 0,
+            height: 0,
+            toJSON: () => ({}),
+          };
         };
-      };
     }
   });
 
@@ -264,18 +279,18 @@ describe('convertSvgToDrawnix', () => {
     expect(result.summary.arrowCount).toBe(1);
     expect(result.summary.rectCount).toBe(1);
     expect(result.summary.componentCount).toBe(1); // bg and box removed, only icon_AF04 and arrow remain. wait, arrow converted, label converted.
-    
-    // the remaining elements should be 
+
+    // the remaining elements should be
     // icon_AF04 (image)
     // box (rectangle geometry)
     // arrow (arrow-line)
     // label (text geometry)
-    
+
     // since base layer has nothing visible left (bg ignored, box extracted, text extracted, arrow extracted, icon extracted), base layer image is not created
-    
+
     const elements = result.elements;
-    
-    const iconEl = elements.find(e => e.id === 'icon_AF04');
+
+    const iconEl = elements.find((e) => e.id === 'icon_AF04');
     expect(iconEl).toEqual(
       expect.objectContaining({
         type: 'image',
@@ -286,8 +301,8 @@ describe('convertSvgToDrawnix', () => {
         ],
       })
     );
-    
-    const boxEl = elements.find(e => e.id === 'box');
+
+    const boxEl = elements.find((e) => e.id === 'box');
     expect(boxEl).toEqual(
       expect.objectContaining({
         type: 'geometry',
@@ -299,14 +314,14 @@ describe('convertSvgToDrawnix', () => {
       })
     );
 
-    const arrowEl = elements.find(e => e.id === 'arrow');
+    const arrowEl = elements.find((e) => e.id === 'arrow');
     expect(arrowEl).toEqual(
       expect.objectContaining({
         type: 'arrow-line',
       })
     );
-    
-    const labelEl = elements.find(e => e.id === 'label');
+
+    const labelEl = elements.find((e) => e.id === 'label');
     expect(labelEl).toEqual(
       expect.objectContaining({
         type: 'geometry',
@@ -363,14 +378,16 @@ describe('convertSvgToDrawnix', () => {
     `;
 
     const result = convertSvgToDrawnix(input);
-    const title = result.elements.find((element) => element.id === 'title') as any;
+    const title = result.elements.find(
+      (element) => element.id === 'title'
+    ) as any;
 
     expect(title.textStyle.fontFamily).toContain('Courier New');
     expect(title.textProperties['font-family']).toContain('Courier New');
     expect(title.svgImportMetadata.sourceFontFamily).toContain('Courier New');
   });
 
-  it('expands native text bounds when a generic source font resolves to a wider role font', () => {
+  it('falls back to a text fragment when resolved native font metrics drift from the source bbox', () => {
     setProjectFontRoleFamilies({
       title: 'Georgia, serif',
       plain: 'Verdana, sans-serif',
@@ -393,18 +410,31 @@ describe('convertSvgToDrawnix', () => {
     `;
 
     const result = convertSvgToDrawnix(input);
-    const title = result.elements.find((element) => element.id === 'mapped-title') as any;
+    const title = result.elements.find(
+      (element) => element.id === 'mapped-title'
+    ) as any;
 
     expect(title.svgImportMetadata).toEqual(
       expect.objectContaining({
-        importMode: 'native',
+        importMode: 'fragment',
         sourceFontFamily: expect.stringContaining('sans-serif'),
       })
     );
-    expect(title.textStyle.fontFamily).toContain('Georgia');
-    expect(title.points[0][0]).toBeLessThan(80);
-    expect(title.points[1][0] - title.points[0][0]).toBeGreaterThan(80);
-    expect(title.points[1][1] - title.points[0][1]).toBeGreaterThanOrEqual(30);
+    expect(title).toEqual(
+      expect.objectContaining({
+        type: 'image',
+      })
+    );
+    expect(title.points).toEqual([
+      [80, 30],
+      [160, 60],
+    ]);
+    expect(title.sceneImportMetadata).toEqual(
+      expect.objectContaining({
+        kind: 'text-fragment',
+        text: 'Wider Title',
+      })
+    );
   });
 
   it('keeps job-like Comic Sans and Arial families instead of remapping them to role fonts', () => {
@@ -425,8 +455,12 @@ describe('convertSvgToDrawnix', () => {
     `;
 
     const result = convertSvgToDrawnix(input);
-    const title = result.elements.find((element) => element.id === 'job-title') as any;
-    const body = result.elements.find((element) => element.id === 'job-body') as any;
+    const title = result.elements.find(
+      (element) => element.id === 'job-title'
+    ) as any;
+    const body = result.elements.find(
+      (element) => element.id === 'job-body'
+    ) as any;
 
     expect(title.textStyle.fontFamily).toContain('Comic Sans MS');
     expect(title.textProperties['font-family']).toContain('Comic Sans MS');
@@ -450,7 +484,9 @@ describe('convertSvgToDrawnix', () => {
     `;
 
     const result = convertSvgToDrawnix(input);
-    const title = result.elements.find((element) => element.id === 'job-title') as any;
+    const title = result.elements.find(
+      (element) => element.id === 'job-title'
+    ) as any;
     const width = title.points[1][0] - title.points[0][0];
 
     expect(title.textStyle.fontFamily).toContain('Comic Sans MS');
@@ -482,7 +518,9 @@ describe('convertSvgToDrawnix', () => {
     `;
 
     const result = convertSvgToDrawnix(input);
-    const title = result.elements.find((element) => element.id === 'stage-title') as any;
+    const title = result.elements.find(
+      (element) => element.id === 'stage-title'
+    ) as any;
     const width = title.points[1][0] - title.points[0][0];
 
     expect(title.autoSize).toBe(false);
@@ -520,7 +558,7 @@ describe('convertSvgToDrawnix', () => {
       iconBoxMap: {},
     });
 
-    const boxEl = result.elements.find(e => e.id === 'box');
+    const boxEl = result.elements.find((e) => e.id === 'box');
     expect(boxEl).toEqual(
       expect.objectContaining({
         type: 'geometry',
@@ -532,7 +570,7 @@ describe('convertSvgToDrawnix', () => {
       })
     );
 
-    const labelEl = result.elements.find(e => e.id === 'label');
+    const labelEl = result.elements.find((e) => e.id === 'label');
     expect(labelEl).toEqual(
       expect.objectContaining({
         type: 'geometry',
@@ -545,7 +583,7 @@ describe('convertSvgToDrawnix', () => {
     expect((labelEl as any).points[1][0]).toBeGreaterThanOrEqual(178);
     expect((labelEl as any).points[1][1]).toBeGreaterThanOrEqual(100);
 
-    const iconEl = result.elements.find(e => e.id === 'icon_AF04');
+    const iconEl = result.elements.find((e) => e.id === 'icon_AF04');
     expect(iconEl).toEqual(
       expect.objectContaining({
         type: 'image',
@@ -557,7 +595,7 @@ describe('convertSvgToDrawnix', () => {
       })
     );
 
-    const arrowEl = result.elements.find(e => e.id === 'arrow') as any;
+    const arrowEl = result.elements.find((e) => e.id === 'arrow') as any;
     expect(arrowEl).toEqual(
       expect.objectContaining({
         type: 'arrow-line',
@@ -586,13 +624,15 @@ describe('convertSvgToDrawnix', () => {
     expect(result.summary.arrowCount).toBe(0);
     expect(result.summary.componentCount).toBe(1); // preserve-arrow -> component
 
-    const fancyArrow = result.elements.find(e => e.id === 'fancy-arrow');
+    const fancyArrow = result.elements.find((e) => e.id === 'fancy-arrow');
     expect(fancyArrow).toEqual(
       expect.objectContaining({
         type: 'image',
       })
     );
-    expect(decodeURIComponent((fancyArrow as any).url)).toContain('viewBox="6 16 128 58"');
+    expect(decodeURIComponent((fancyArrow as any).url)).toContain(
+      'viewBox="6 16 128 58"'
+    );
   });
 
   it('converts marker-based path connectors into arrow elements and keeps the arrow head markers', () => {
@@ -615,7 +655,9 @@ describe('convertSvgToDrawnix', () => {
     `;
 
     const result = convertSvgToDrawnix(input);
-    const arrow = result.elements.find((element) => element.id === 'marker-path-arrow') as any;
+    const arrow = result.elements.find(
+      (element) => element.id === 'marker-path-arrow'
+    ) as any;
 
     expect(arrow).toEqual(
       expect.objectContaining({
@@ -645,10 +687,14 @@ describe('convertSvgToDrawnix', () => {
 
     const result = convertSvgToDrawnix(input);
 
-    expect(result.elements.find((element) => element.id === 'svg-base-layer')).toBeUndefined();
+    expect(
+      result.elements.find((element) => element.id === 'svg-base-layer')
+    ).toBeUndefined();
     expect(result.summary.componentCount).toBe(0);
 
-    expect(result.elements.find((element) => element.id === 'residual-ellipse')).toEqual(
+    expect(
+      result.elements.find((element) => element.id === 'residual-ellipse')
+    ).toEqual(
       expect.objectContaining({
         type: 'geometry',
         shape: 'ellipse',
@@ -659,7 +705,9 @@ describe('convertSvgToDrawnix', () => {
       })
     );
 
-    expect(result.elements.find((element) => element.id === 'stage-arrow-body-1')).toEqual(
+    expect(
+      result.elements.find((element) => element.id === 'stage-arrow-body-1')
+    ).toEqual(
       expect.objectContaining({
         type: 'vector-line',
         fill: '#7c592a',
@@ -675,7 +723,9 @@ describe('convertSvgToDrawnix', () => {
       })
     );
 
-    expect(result.elements.find((element) => element.id === 'residual-bracket-1')).toEqual(
+    expect(
+      result.elements.find((element) => element.id === 'residual-bracket-1')
+    ).toEqual(
       expect.objectContaining({
         type: 'vector-line',
         points: [
@@ -687,7 +737,9 @@ describe('convertSvgToDrawnix', () => {
       })
     );
 
-    expect(result.elements.find((element) => element.id === 'residual-axes-1')).toEqual(
+    expect(
+      result.elements.find((element) => element.id === 'residual-axes-1')
+    ).toEqual(
       expect.objectContaining({
         type: 'vector-line',
         points: [
@@ -696,7 +748,9 @@ describe('convertSvgToDrawnix', () => {
         ],
       })
     );
-    expect(result.elements.find((element) => element.id === 'residual-axes-2')).toEqual(
+    expect(
+      result.elements.find((element) => element.id === 'residual-axes-2')
+    ).toEqual(
       expect.objectContaining({
         type: 'vector-line',
         points: [
@@ -717,7 +771,9 @@ describe('convertSvgToDrawnix', () => {
 
     const result = convertSvgToDrawnix(input);
 
-    expect(result.elements.find((element) => element.id === 'svg-base-layer')).toBeUndefined();
+    expect(
+      result.elements.find((element) => element.id === 'svg-base-layer')
+    ).toBeUndefined();
     expect(result.summary.componentCount).toBe(2);
     expect(result.elements.find((element) => element.id === 'curve-a')).toEqual(
       expect.objectContaining({
@@ -777,7 +833,9 @@ describe('convertSvgToDrawnix', () => {
     `;
 
     const result = convertSvgToDrawnix(input);
-    const label = result.elements.find((element) => element.id === 'large-canvas-label') as any;
+    const label = result.elements.find(
+      (element) => element.id === 'large-canvas-label'
+    ) as any;
 
     expect(label).toEqual(
       expect.objectContaining({
@@ -835,8 +893,12 @@ describe('convertSvgToDrawnix', () => {
     });
 
     expect(result.summary.textCount).toBe(0);
-    expect(result.elements.find((element) => element.id === 'placeholder')).toBeUndefined();
-    expect(result.elements.find((element) => element.id === 'icon_AF01')).toEqual(
+    expect(
+      result.elements.find((element) => element.id === 'placeholder')
+    ).toBeUndefined();
+    expect(
+      result.elements.find((element) => element.id === 'icon_AF01')
+    ).toEqual(
       expect.objectContaining({
         type: 'image',
         url: 'data:image/png;base64,new',
@@ -862,7 +924,9 @@ describe('convertSvgToDrawnix', () => {
     `;
 
     const result = convertSvgToDrawnix(input);
-    const rotated = result.elements.find((element) => element.id === 'rotated-title') as any;
+    const rotated = result.elements.find(
+      (element) => element.id === 'rotated-title'
+    ) as any;
 
     expect(rotated).toEqual(
       expect.objectContaining({
@@ -881,7 +945,9 @@ describe('convertSvgToDrawnix', () => {
 
   it('parses zip package from components or icons folders and prefers _nobg component asset', async () => {
     const archive = zipSync({
-      'pic/final.svg': encodeUtf8('<svg xmlns="http://www.w3.org/2000/svg"></svg>'),
+      'pic/final.svg': encodeUtf8(
+        '<svg xmlns="http://www.w3.org/2000/svg"></svg>'
+      ),
       'pic/boxlib.json': encodeUtf8(
         JSON.stringify({
           boxes: [
@@ -908,8 +974,12 @@ describe('convertSvgToDrawnix', () => {
     expect(result.fileName).toBe('final.svg');
     expect(result.svgText).toContain('<svg');
     expect(Object.keys(result.componentAssets)).toEqual(['icon_AF04']);
-    expect(result.componentAssets.icon_AF04.fileName).toBe('icon_AF04_nobg.png');
-    expect(result.componentAssets.icon_AF04.url).toContain('data:image/png;base64');
+    expect(result.componentAssets.icon_AF04.fileName).toBe(
+      'icon_AF04_nobg.png'
+    );
+    expect(result.componentAssets.icon_AF04.url).toContain(
+      'data:image/png;base64'
+    );
     expect(result.iconBoxMap.AF04).toEqual(
       expect.objectContaining({
         label: '<AF>04',

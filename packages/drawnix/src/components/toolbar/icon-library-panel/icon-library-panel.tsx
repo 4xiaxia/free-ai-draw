@@ -19,6 +19,7 @@ import type {
 } from '../../../asset-library/types';
 import {
   ASSET_LIBRARY_SOFT_LIMIT,
+  createAssetLibraryItemFromBoardSelection,
   dataUrlToBlob,
   formatAssetFileSize,
   getAssetLibraryUsage,
@@ -41,10 +42,7 @@ const getAssetTimestamp = (value?: string) => {
   return Number.isFinite(timestamp) ? timestamp : 0;
 };
 
-const sortAssets = (
-  assets: IconLibraryAsset[],
-  sort: AssetLibrarySort
-) => {
+const sortAssets = (assets: IconLibraryAsset[], sort: AssetLibrarySort) => {
   const nextAssets = [...assets];
   if (sort === 'name') {
     return nextAssets.sort((a, b) => a.name.localeCompare(b.name));
@@ -62,7 +60,9 @@ const sortAssets = (
   );
 };
 
-export const IconLibraryPanel: React.FC<IconLibraryPanelProps> = ({ board }) => {
+export const IconLibraryPanel: React.FC<IconLibraryPanelProps> = ({
+  board,
+}) => {
   const { t } = useI18n();
   const [assets, setAssets] = useState<IconLibraryAsset[]>([]);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
@@ -70,6 +70,7 @@ export const IconLibraryPanel: React.FC<IconLibraryPanelProps> = ({ board }) => 
   const [filter, setFilter] = useState<AssetLibraryFilter>('all');
   const [sort, setSort] = useState<AssetLibrarySort>('recent');
   const [isUploading, setIsUploading] = useState(false);
+  const [isSavingSelection, setIsSavingSelection] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [renamingCardId, setRenamingCardId] = useState<string | null>(null);
@@ -115,6 +116,9 @@ export const IconLibraryPanel: React.FC<IconLibraryPanelProps> = ({ board }) => 
           return false;
         }
         if (filter === 'svg' && asset.kind !== 'svg') {
+          return false;
+        }
+        if (filter === 'drawnix' && asset.kind !== 'drawnix') {
           return false;
         }
         if (
@@ -173,14 +177,32 @@ export const IconLibraryPanel: React.FC<IconLibraryPanelProps> = ({ board }) => 
     }
   };
 
-  const handleApply = (asset: IconLibraryAsset) => {
-    applyIconLibraryAsset(board, asset);
-    const usedAt = new Date().toISOString();
-    setAndPersistAssets((currentAssets) =>
-      currentAssets.map((item) =>
-        item.id === asset.id ? { ...item, usedAt, updatedAt: usedAt } : item
-      )
-    );
+  const handleSaveSelection = async () => {
+    setIsSavingSelection(true);
+    setErrorMessage('');
+    try {
+      const nextAsset = await createAssetLibraryItemFromBoardSelection(board);
+      setAndPersistAssets((currentAssets) => [nextAsset, ...currentAssets]);
+      setSelectedAssetId(nextAsset.id);
+    } catch {
+      setErrorMessage(t('assetLibrary.saveSelectionFailed'));
+    } finally {
+      setIsSavingSelection(false);
+    }
+  };
+
+  const handleApply = async (asset: IconLibraryAsset) => {
+    try {
+      await applyIconLibraryAsset(board, asset);
+      const usedAt = new Date().toISOString();
+      setAndPersistAssets((currentAssets) =>
+        currentAssets.map((item) =>
+          item.id === asset.id ? { ...item, usedAt, updatedAt: usedAt } : item
+        )
+      );
+    } catch {
+      setErrorMessage(t('assetLibrary.insertFailed'));
+    }
   };
 
   const handleRemove = (assetId: string) => {
@@ -240,17 +262,19 @@ export const IconLibraryPanel: React.FC<IconLibraryPanelProps> = ({ board }) => 
   };
 
   const handleDownload = (asset: IconLibraryAsset) => {
-    const extension = asset.kind === 'svg' ? 'svg' : asset.mimeType.split('/')[1] || 'png';
+    const extension =
+      asset.kind === 'drawnix'
+        ? 'drawnix'
+        : asset.kind === 'svg'
+        ? 'svg'
+        : asset.mimeType.split('/')[1] || 'png';
     download(dataUrlToBlob(asset.dataUrl), `${asset.name}.${extension}`);
   };
 
   return (
     <Island
       padding={0}
-      className={classNames(
-        ATTACHED_ELEMENT_CLASS_NAME,
-        'icon-library-panel'
-      )}
+      className={classNames(ATTACHED_ELEMENT_CLASS_NAME, 'icon-library-panel')}
     >
       <div className="icon-library-panel__topbar">
         <div className="icon-library-panel__heading">
@@ -261,16 +285,30 @@ export const IconLibraryPanel: React.FC<IconLibraryPanelProps> = ({ board }) => 
             {t('iconLibrary.hint')}
           </div>
         </div>
-        <button
-          type="button"
-          className="icon-library-panel__primary"
-          onClick={() => {
-            void handleUpload();
-          }}
-          disabled={isUploading}
-        >
-          {isUploading ? t('iconLibrary.uploading') : t('iconLibrary.upload')}
-        </button>
+        <div className="icon-library-panel__topbar-actions">
+          <button
+            type="button"
+            className="icon-library-panel__secondary"
+            onClick={() => {
+              void handleSaveSelection();
+            }}
+            disabled={isSavingSelection}
+          >
+            {isSavingSelection
+              ? t('assetLibrary.savingSelection')
+              : t('assetLibrary.saveSelection')}
+          </button>
+          <button
+            type="button"
+            className="icon-library-panel__primary"
+            onClick={() => {
+              void handleUpload();
+            }}
+            disabled={isUploading}
+          >
+            {isUploading ? t('iconLibrary.uploading') : t('iconLibrary.upload')}
+          </button>
+        </div>
       </div>
 
       <div className="icon-library-panel__body">
@@ -308,6 +346,9 @@ export const IconLibraryPanel: React.FC<IconLibraryPanelProps> = ({ board }) => 
               <option value="all">{t('assetLibrary.filter.all')}</option>
               <option value="image">{t('assetLibrary.filter.image')}</option>
               <option value="svg">{t('assetLibrary.filter.svg')}</option>
+              <option value="drawnix">
+                {t('assetLibrary.filter.drawnix')}
+              </option>
               <option value="favorite">
                 {t('assetLibrary.filter.favorite')}
               </option>
@@ -333,7 +374,12 @@ export const IconLibraryPanel: React.FC<IconLibraryPanelProps> = ({ board }) => 
           </div>
 
           <div className="icon-library-panel__meta">
-            <span>{t('assetLibrary.count').replace('{count}', String(assets.length))}</span>
+            <span>
+              {t('assetLibrary.count').replace(
+                '{count}',
+                String(assets.length)
+              )}
+            </span>
             <span>{t('assetLibrary.dropHint')}</span>
           </div>
 
@@ -374,7 +420,9 @@ export const IconLibraryPanel: React.FC<IconLibraryPanelProps> = ({ board }) => 
                       'icon-library-panel__card--renaming': isRenaming,
                     })}
                     onClick={() => setSelectedAssetId(asset.id)}
-                    onDoubleClick={() => handleApply(asset)}
+                    onDoubleClick={() => {
+                      void handleApply(asset);
+                    }}
                     title={asset.name}
                     aria-label={asset.name}
                   >
@@ -407,7 +455,9 @@ export const IconLibraryPanel: React.FC<IconLibraryPanelProps> = ({ board }) => 
                       />
                     ) : (
                       <div className="icon-library-panel__name-row">
-                        <div className="icon-library-panel__name">{asset.name}</div>
+                        <div className="icon-library-panel__name">
+                          {asset.name}
+                        </div>
                         <button
                           type="button"
                           className="icon-library-panel__rename-btn"
@@ -436,7 +486,14 @@ export const IconLibraryPanel: React.FC<IconLibraryPanelProps> = ({ board }) => 
           {selectedAsset ? (
             <>
               <div className="icon-library-panel__detail-preview">
-                <img src={selectedAsset.dataUrl} alt={selectedAsset.name} />
+                <img
+                  src={
+                    selectedAsset.kind === 'drawnix'
+                      ? selectedAsset.thumbnailDataUrl || selectedAsset.dataUrl
+                      : selectedAsset.dataUrl
+                  }
+                  alt={selectedAsset.name}
+                />
               </div>
               <input
                 className="icon-library-panel__detail-title"
@@ -451,7 +508,9 @@ export const IconLibraryPanel: React.FC<IconLibraryPanelProps> = ({ board }) => 
                     )
                   );
                 }}
-                onBlur={(event) => handleRename(selectedAsset.id, event.target.value)}
+                onBlur={(event) =>
+                  handleRename(selectedAsset.id, event.target.value)
+                }
                 onKeyDown={(event) => {
                   if (event.key === 'Enter') {
                     event.currentTarget.blur();
@@ -466,7 +525,9 @@ export const IconLibraryPanel: React.FC<IconLibraryPanelProps> = ({ board }) => 
                 </div>
                 <div>
                   <dt>{t('assetLibrary.source')}</dt>
-                  <dd>{t(`assetLibrary.source.${selectedAsset.source}` as any)}</dd>
+                  <dd>
+                    {t(`assetLibrary.source.${selectedAsset.source}` as any)}
+                  </dd>
                 </div>
                 <div>
                   <dt>{t('assetLibrary.createdAt')}</dt>
@@ -476,23 +537,38 @@ export const IconLibraryPanel: React.FC<IconLibraryPanelProps> = ({ board }) => 
                   <dt>{t('assetLibrary.size')}</dt>
                   <dd>{formatAssetFileSize(selectedAsset.size)}</dd>
                 </div>
+                {selectedAsset.kind === 'drawnix' && (
+                  <div>
+                    <dt>{t('assetLibrary.elements')}</dt>
+                    <dd>{selectedAsset.elementCount || 0}</dd>
+                  </div>
+                )}
               </dl>
-              <div className="icon-library-panel__actions">
+              <div
+                className={classNames('icon-library-panel__actions', {
+                  'icon-library-panel__actions--compact':
+                    selectedAsset.kind === 'drawnix',
+                })}
+              >
                 <button
                   type="button"
                   className="icon-library-panel__insert"
-                  onClick={() => handleApply(selectedAsset)}
+                  onClick={() => {
+                    void handleApply(selectedAsset);
+                  }}
                 >
                   {t('assetLibrary.insert')}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => handleSetSubject(selectedAsset.id)}
-                >
-                  {selectedAsset.isSubject
-                    ? t('assetLibrary.subjectSet')
-                    : t('assetLibrary.setSubject')}
-                </button>
+                {selectedAsset.kind !== 'drawnix' && (
+                  <button
+                    type="button"
+                    onClick={() => handleSetSubject(selectedAsset.id)}
+                  >
+                    {selectedAsset.isSubject
+                      ? t('assetLibrary.subjectSet')
+                      : t('assetLibrary.setSubject')}
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => handleToggleFavorite(selectedAsset.id)}
